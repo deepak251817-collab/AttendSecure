@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Leave Requests</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #c7d2fe;
+            --success: #16a34a;
+            --success-light: #dcfce7;
+            --success-dark: #166534;
+            --warning: #ca8a04;
+            --warning-light: #fef9c3;
+            --warning-dark: #854d0e;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --danger-dark: #991b1b;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --glow: rgba(79, 70, 229, 0.15);
+        }
+
+        [data-theme="dark"] {
+            --primary: #818cf8;
+            --primary-dark: #6366f1;
+            --primary-light: #312e81;
+            --success: #34d399;
+            --success-light: #064e3b;
+            --success-dark: #a7f3d0;
+            --warning: #fbbf24;
+            --warning-light: #78350f;
+            --warning-dark: #fde68a;
+            --danger: #f87171;
+            --danger-light: #7f1d1d;
+            --danger-dark: #fecaca;
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-dark: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, var(--bg-main) 0%, var(--primary-light) 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--text-dark);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .page-header {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px var(--shadow), 0 10px 15px -3px var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .page-title i {
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border-radius: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1rem;
+            border: none;
+            box-shadow: 0 2px 4px var(--shadow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-dark);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-main);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-dark);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-dark);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        }
+
+        .request-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px var(--shadow);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .request-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px -8px var(--shadow);
+            border-color: var(--primary-light);
+        }
+
+        .card-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(to right, var(--primary-light), transparent);
+        }
+
+        .card-header h5 {
+            color: var(--text-dark);
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+        }
+
+        .card-header h5 i {
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .card-body {
+            padding: 2rem;
+            background: linear-gradient(to bottom, var(--bg-card), var(--bg-main));
+        }
+
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.625rem;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .status-Pending {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+            box-shadow: 0 2px 4px rgba(202, 138, 4, 0.1);
+        }
+
+        .status-Approved {
+            background: var(--success-light);
+            color: var(--success-dark);
+            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.1);
+        }
+
+        .status-Denied {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-light);
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .info-row:hover {
+            background: var(--bg-main);
+        }
+
+        .info-row i {
+            color: var(--primary);
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .info-row strong {
+            color: var(--text-dark);
+            font-weight: 600;
+            min-width: 5rem;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        .alert {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: none;
+            border-radius: 16px;
+            padding: 1.25rem 1.75rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px var(--shadow);
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .theme-toggle i {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover i {
+            transform: rotate(10deg);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 0 0.5rem;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .page-title {
+                font-size: 1.75rem;
+                justify-content: center;
+            }
+
+            .request-card {
+                margin-bottom: 1.5rem;
+            }
+
+            .card-header {
+                padding: 1.25rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .card-body {
+                padding: 1.5rem;
+            }
+
+            .info-row {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: center;
+                text-align: center;
+            }
+
+            .info-row i {
+                margin-bottom: 0.25rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .status-badge {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="container">
+        <div class="page-header">
+            <h2 class="page-title">
+                <i class="fas fa-calendar-check"></i>
+                Leave Requests
+            </h2>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+
+        {% if leave_requests %}
+            <div class="row">
+                {% for request in leave_requests %}
+                    <div class="col-md-6">
+                        <div class="request-card">
+                            <div class="card-header">
+                                <h5>
+                                    <i class="fas fa-user"></i>
+                                    {{ request.username }}
+                                </h5>
+                                <span class="status-badge status-{{ request.status }}">
+                                    <i class="fas fa-{% if request.status == 'Pending' %}clock
+                                               {% elif request.status == 'Approved' %}check-circle
+                                               {% else %}times-circle{% endif %}"></i>
+                                    {{ request.status }}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-row">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <strong>Date:</strong>
+                                    {{ request.date }}
+                                </div>
+                                <div class="info-row">
+                                    <i class="fas fa-comment-alt"></i>
+                                    <strong>Reason:</strong>
+                                    {{ request.reason or 'No reason provided' }}
+                                </div>
+                                
+                                {% if request.status == 'Pending' %}
+                                    <form method="POST" action="{{ url_for('handle_leave_request') }}" class="mt-4">
+                                        <input type="hidden" name="request_id" value="{{ request.id }}">
+                                        <div class="btn-group">
+                                            <button type="submit" name="action" value="approve" 
+                                                    class="btn btn-success">
+                                                <i class="fas fa-check"></i>
+                                                Approve
+                                            </button>
+                                            <button type="submit" name="action" value="deny" 
+                                                    class="btn btn-danger">
+                                                <i class="fas fa-times"></i>
+                                                Deny
+                                            </button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert">
+                <i class="fas fa-info-circle"></i>
+                No leave requests found.
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            const currentTheme = body.getAttribute('data-theme');
+            
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('leave-requests-theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('leave-requests-theme', 'dark');
+            }
+        }
+
+        // Initialize theme from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('leave-requests-theme');
+            const themeIcon = document.querySelector('.theme-toggle i');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        });
+    </script>
+</body>
+</html>

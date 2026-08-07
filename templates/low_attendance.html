@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Attendance Alert</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --success-color: #22c55e;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --hover-bg: #f1f5f9;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #6366f1;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --success-color: #22c55e;
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: #334155;
+            --hover-bg: #334155;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            background-color: var(--bg-main);
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            background-color: var(--bg-card);
+            border-radius: 20px;
+            box-shadow: 0 4px 6px -1px var(--shadow-color),
+                       0 2px 4px -1px var(--shadow-color);
+            padding: 2rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--warning-color), var(--danger-color));
+        }
+
+        h1 {
+            color: var(--text-primary);
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        h1 i {
+            color: var(--warning-color);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-select, .form-control {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .form-select:focus, .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
+            margin-top: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(45deg, var(--warning-color), #f97316);
+            color: white;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .table th {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--bg-card);
+        }
+
+        .attendance-cell {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 200px;
+        }
+
+        .badge {
+            padding: 0.75rem 1.25rem;
+            font-weight: 700;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 100px;
+            justify-content: center;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge.bg-danger {
+            background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+            color: white !important;
+            border: 2px solid #fecaca;
+        }
+
+        .badge.bg-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+            color: white !important;
+            border: 2px solid #fef3c7;
+        }
+
+        .badge.bg-info {
+            background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+            color: white !important;
+            border: 2px solid #dbeafe;
+        }
+
+        .badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(255,255,255,0.1) 0%, 
+                rgba(255,255,255,0.2) 50%, 
+                rgba(255,255,255,0.1) 100%);
+            transform: translateX(-100%);
+            transition: transform 0.5s ease;
+        }
+
+        .badge:hover::before {
+            transform: translateX(100%);
+        }
+
+        .progress {
+            height: 10px;
+            background-color: var(--bg-main);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            flex-grow: 1;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 999px;
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-critical {
+            background: linear-gradient(45deg, #dc2626, #991b1b);
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+        }
+
+        .progress-warning {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+        }
+
+        .progress-moderate {
+            background: linear-gradient(45deg, #3b82f6, #2563eb);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 50%,
+                rgba(255,255,255,0) 100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Dark mode enhancements */
+        [data-theme="dark"] .badge {
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="dark"] .badge.bg-danger {
+            background: linear-gradient(135deg, #dc2626, #7f1d1d) !important;
+            border: 2px solid #ffffff;
+            box-shadow: 
+                0 0 10px rgba(220, 38, 38, 0.4),
+                0 0 20px rgba(220, 38, 38, 0.2);
+        }
+
+        [data-theme="dark"] .badge.bg-warning {
+            background: linear-gradient(135deg, #f59e0b, #92400e) !important;
+            border: 2px solid #ffffff;
+            box-shadow: 
+                0 0 10px rgba(245, 158, 11, 0.4),
+                0 0 20px rgba(245, 158, 11, 0.2);
+        }
+
+        [data-theme="dark"] .badge.bg-info {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+            border: 2px solid #ffffff;
+            box-shadow: 
+                0 0 10px rgba(59, 130, 246, 0.4),
+                0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        [data-theme="dark"] .progress {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="dark"] .progress-critical {
+            background: linear-gradient(45deg, #dc2626, #7f1d1d);
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
+        }
+
+        [data-theme="dark"] .progress-warning {
+            background: linear-gradient(45deg, #f59e0b, #92400e);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+
+        [data-theme="dark"] .progress-moderate {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Add hover effects */
+        .attendance-cell:hover .badge {
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+
+        .attendance-cell:hover .progress-bar {
+            filter: brightness(1.2);
+        }
+
+        .alert {
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+
+        .alert i {
+            font-size: 1.25rem;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-card);
+            border: none;
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+                margin: 1rem;
+            }
+
+            .table-responsive {
+                border-radius: 12px;
+                overflow-x: auto;
+            }
+
+            .attendance-cell {
+                min-width: 150px;
+            }
+        }
+
+        /* Dark mode table styles */
+        [data-theme="dark"] .table td,
+        [data-theme="dark"] .table th {
+            color: #ffffff !important;
+            background-color: var(--bg-card) !important;
+        }
+
+        [data-theme="dark"] .table td {
+            font-weight: 500;
+        }
+
+        [data-theme="dark"] .table th {
+            font-weight: 700;
+            background-color: #1a1a1a !important;
+        }
+
+        /* Remove text shadows from table cells */
+        [data-theme="dark"] .table td,
+        [data-theme="dark"] .table th {
+            text-shadow: none !important;
+        }
+
+        /* Ensure numbers are clearly visible */
+        [data-theme="dark"] .table td:nth-child(2),
+        [data-theme="dark"] .table td:nth-child(3),
+        [data-theme="dark"] .table td:nth-child(4) {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+
+        /* Add subtle hover effect */
+        [data-theme="dark"] .table tr:hover td {
+            background-color: #2d3748 !important;
+        }
+
+        /* Keep the badge styles */
+        [data-theme="dark"] .badge {
+            color: #ffffff !important;
+            font-weight: 600;
+            border: 1px solid #ffffff !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+        }
+
+        [data-theme="dark"] .badge.bg-danger {
+            background: #991b1b !important;
+            border-color: #ef4444 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-warning {
+            background: #92400e !important;
+            border-color: #f59e0b !important;
+        }
+
+        [data-theme="dark"] .badge.bg-info {
+            background: #1e40af !important;
+            border-color: #3b82f6 !important;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="container">
+        <h1>
+            <i class="fas fa-exclamation-triangle"></i>
+            Low Attendance Alert
+        </h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert alert-{{ messages[0][0] }}">
+                    <i class="fas fa-{% if messages[0][0] == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                    {{ messages[0][1] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="class" class="form-label">Class</label>
+                        <select name="class" id="class" class="form-select" required>
+                            <option value="">Select Class</option>
+                            {% for class_name in classes %}
+                                <option value="{{ class_name }}" {% if class_name == selected_class %}selected{% endif %}>{{ class_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="section" class="form-label">Section</label>
+                        <select name="section" id="section" class="form-select" required>
+                            <option value="">Select Section</option>
+                            {% for section_name in sections %}
+                                <option value="{{ section_name }}" {% if section_name == selected_section %}selected{% endif %}>{{ section_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject</label>
+                        <select name="subject_id" id="subject" class="form-select" required>
+                            <option value="">Select Subject</option>
+                            {% for subject in teacher_subjects %}
+                                <option value="{{ subject.subject_id }}" {% if subject.subject_id|string == selected_subject_id|string %}selected{% endif %}>
+                                    {{ subject.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="threshold" class="form-label">Attendance Threshold (%)</label>
+                        <input type="number" name="threshold" id="threshold" class="form-control" 
+                               value="{{ threshold }}" min="0" max="100" step="1" required>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Generate Report</button>
+        </form>
+
+        {% if students %}
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        <i class="fas fa-user-clock"></i>
+                        Students with Low Attendance in {{ students[0]['subject_name'] }}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <i class="fas fa-user me-2"></i>
+                                        Student Name
+                                    </th>
+                                    <th>
+                                        <i class="fas fa-chalkboard me-2"></i>
+                                        Classes Taken
+                                    </th>
+                                    <th>
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        Present + Approved Leave
+                                    </th>
+                                    <th>
+                                        <i class="fas fa-percentage me-2"></i>
+                                        Attendance %
+                                    </th>
+                                    <th>
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Status
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                    <tr>
+                                        <td>{{ student['username'] }}</td>
+                                        <td>{{ student['total_classes'] }}</td>
+                                        <td>{{ student['present_count'] + student['approved_leave_count'] }}</td>
+                                        <td>{{ student['attendance_percentage'] }}%</td>
+                                        <td>
+                                            <div class="attendance-cell">
+                                                <span class="badge {% if student['attendance_percentage'] < 50 %}bg-danger
+                                                                  {% elif student['attendance_percentage'] < 75 %}bg-warning
+                                                                  {% else %}bg-info{% endif %}">
+                                                    {% if student['attendance_percentage'] < 50 %}Critical
+                                                    {% elif student['attendance_percentage'] < 75 %}Warning
+                                                    {% else %}Moderate{% endif %}
+                                                </span>
+                                                <div class="progress">
+                                                    <div class="progress-bar {% if student['attendance_percentage'] < 50 %}progress-critical
+                                                                          {% elif student['attendance_percentage'] < 75 %}progress-warning
+                                                                          {% else %}progress-moderate{% endif %}"
+                                                         style="width: {{ student['attendance_percentage'] }}%">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% elif selected_class and selected_section %}
+            <div class="alert alert-info">
+                No students found with attendance below the threshold for the selected criteria.
+            </div>
+        {% endif %}
+
+        <div class="footer-actions mt-4">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('attendance-theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('attendance-theme', 'dark');
+            }
+        }
+
+        // Initialize theme from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('attendance-theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+            }
+        });
+    </script>
+</body>
+</html>

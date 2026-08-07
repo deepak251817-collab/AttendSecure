@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Report</title>
+</head>
+<body>
+    <h1>Attendance Report for {{ selected_date }}</h1>
+    <table border="1">
+        <tr>
+            <th>Student Name</th>
+            <th>Status</th>
+        </tr>
+        {% for record in attendance_records %}
+        <tr>
+            <td>{{ record.username }}</td>
+            <td>{{ record.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/view_attendance">Back to Select Date</a>
+</body>
+</html>

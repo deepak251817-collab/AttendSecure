@@ -1,0 +1,142 @@
+@startuml Enhanced_Attendance_Management_System_ERD
+
+' Styling and Theme
+!theme plain
+skinparam backgroundColor white
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+' Custom styling
+skinparam class {
+    BackgroundColor #F8F9FA
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
+    BorderThickness 2
+    FontSize 14
+    AttributeFontSize 12
+}
+
+' Color definitions
+!$primary = "#3498DB"
+!$secondary = "#2ECC71"
+!$warning = "#F1C40F"
+!$danger = "#E74C3C"
+
+' Entity definitions with custom colors
+package "Authentication" {
+    class Users #aliceblue {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        --
+        username: VARCHAR(50)
+        password_hash: VARCHAR(255)
+        role: ENUM
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+        ..
+        <i>Roles: admin, teacher, student</i>
+    }
+}
+
+package "Core Entities" {
+    class Teachers #e8f8f5 {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        <color:#3498DB>FK user_id: INT</color>
+        --
+        name: VARCHAR(100)
+        email: VARCHAR(100)
+        phone: VARCHAR(20)
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+    }
+
+    class Students #e8f8f5 {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        <color:#3498DB>FK user_id: INT</color>
+        --
+        name: VARCHAR(100)
+        roll_number: VARCHAR(20)
+        class_info: VARCHAR(50)
+        email: VARCHAR(100)
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+    }
+
+    class Subjects #e8f8f5 {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        --
+        name: VARCHAR(100)
+        code: VARCHAR(20)
+        description: TEXT
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+    }
+}
+
+package "Relationships" {
+    class TeacherSubjects #fff5e6 {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        <color:#3498DB>FK teacher_id: INT</color>
+        <color:#3498DB>FK subject_id: INT</color>
+        --
+        created_at: TIMESTAMP
+    }
+}
+
+package "Tracking" {
+    class Attendance #f9ebea {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        <color:#3498DB>FK student_id: INT</color>
+        <color:#3498DB>FK subject_id: INT</color>
+        --
+        date: DATE
+        status: ENUM
+        marked_by: INT
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+        ..
+        <i>Status: present, absent, late</i>
+    }
+
+    class LeaveRequests #f9ebea {
+        <b><color:#E74C3C>PK id: INT</color></b>
+        <color:#3498DB>FK student_id: INT</color>
+        --
+        start_date: DATE
+        end_date: DATE
+        reason: TEXT
+        status: ENUM
+        approved_by: INT
+        created_at: TIMESTAMP
+        updated_at: TIMESTAMP
+        ..
+        <i>Status: pending, approved, rejected</i>
+    }
+}
+
+' Relationships with labels
+Users "1" -- "0..1" Teachers : has >
+Users "1" -- "0..1" Students : has >
+Teachers "1" -- "*" TeacherSubjects : teaches >
+Subjects "1" -- "*" TeacherSubjects : assigned to >
+Students "1" -- "*" Attendance : has >
+Subjects "1" -- "*" Attendance : tracked for >
+Students "1" -- "*" LeaveRequests : submits >
+Users "1" -- "*" LeaveRequests : approves >
+
+' Notes
+note right of Users
+  Central authentication system
+  Handles all user types
+end note
+
+note right of TeacherSubjects
+  Junction table for
+  many-to-many relationship
+end note
+
+note bottom of Attendance
+  Daily attendance tracking
+  with status management
+end note
+
+@enduml 

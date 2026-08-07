@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Student Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme variables */
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #818cf8;
+            --primary-gradient: linear-gradient(135deg, #4f46e5, #818cf8);
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --success-gradient: linear-gradient(135deg, #22c55e, #4ade80);
+            --warning-color: #f59e0b;
+            --warning-gradient: linear-gradient(135deg, #f59e0b, #fbbf24);
+            --danger-color: #ef4444;
+            --danger-gradient: linear-gradient(135deg, #ef4444, #f87171);
+            --info-color: #3b82f6;
+            --info-gradient: linear-gradient(135deg, #3b82f6, #60a5fa);
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --hover-bg: #f1f5f9;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+            --input-text: #1e293b;
+            --input-border: #e2e8f0;
+            --input-focus: rgba(79, 70, 229, 0.1);
+            --card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+            --card-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.5);
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --primary-color: #818cf8;
+            --primary-dark: #6366f1;
+            --primary-light: #a5b4fc;
+            --primary-gradient: linear-gradient(135deg, #6366f1, #818cf8);
+            --secondary-color: #94a3b8;
+            --success-color: #4ade80;
+            --success-gradient: linear-gradient(135deg, #22c55e, #4ade80);
+            --warning-color: #fbbf24;
+            --warning-gradient: linear-gradient(135deg, #f59e0b, #fbbf24);
+            --danger-color: #f87171;
+            --danger-gradient: linear-gradient(135deg, #ef4444, #f87171);
+            --info-color: #60a5fa;
+            --info-gradient: linear-gradient(135deg, #3b82f6, #60a5fa);
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: #334155;
+            --hover-bg: #1e293b;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --input-bg: #1e293b;
+            --input-text: #f8fafc;
+            --input-border: #334155;
+            --input-focus: rgba(99, 102, 241, 0.2);
+            --card-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+            --card-shine: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Enhanced animations */
+        @keyframes cardShine {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.1) 0px, transparent 50%);
+            min-height: 100vh;
+            padding: 1.5rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .dashboard-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: var(--primary-gradient);
+        }
+
+        .dashboard-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 200%;
+            height: 100%;
+            background-image: var(--card-shine);
+            animation: cardShine 8s linear infinite;
+            pointer-events: none;
+        }
+
+        .dashboard-title {
+            color: var(--text-primary);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            letter-spacing: -0.025em;
+        }
+
+        .dashboard-title i {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px rgba(129, 140, 248, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            letter-spacing: -0.025em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--card-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn:hover::before {
+            opacity: 0.2;
+        }
+
+        .btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover i {
+            transform: translateX(4px);
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-info {
+            background: var(--info-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-outline-danger {
+            background: transparent;
+            border: 2px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger-gradient);
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+        }
+
+        .role-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .role-section:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .role-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .admin-section::before {
+            background: linear-gradient(to right, var(--danger-color), #fb7185);
+        }
+
+        .teacher-section::before {
+            background: linear-gradient(to right, var(--success-color), #86efac);
+        }
+
+        .student-section::before {
+            background: linear-gradient(to right, var(--info-color), #93c5fd);
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            letter-spacing: -0.025em;
+        }
+
+        .section-title i {
+            font-size: 1.75rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1.25rem 1.25rem 1.25rem 3.5rem;
+            border-radius: 1.25rem;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-input:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 
+                0 0 0 4px var(--input-focus),
+                0 8px 16px rgba(0, 0, 0, 0.1);
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus + .search-icon {
+            color: var(--primary-color);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .user-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--card-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .user-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .user-card:hover::before {
+            opacity: 0.1;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .user-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .user-card:hover .user-icon {
+            transform: scale(1.1) rotate(10deg);
+        }
+
+        .admin-icon {
+            background: #fef2f2;
+            color: var(--danger-color);
+        }
+
+        .teacher-icon {
+            background: #f0fdf4;
+            color: var(--success-color);
+        }
+
+        .student-icon {
+            background: #eff6ff;
+            color: var(--info-color);
+        }
+
+        .user-details h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .user-role {
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .role-badge {
+            padding: 0.625rem 1.25rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .role-badge i {
+            font-size: 0.875rem;
+        }
+
+        .user-meta {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-sm {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.75rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-sm i {
+            font-size: 0.875rem;
+        }
+
+        .btn-outline-primary {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-outline-danger {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 2px solid var(--danger-color);
+            color: var(--danger-color);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger-gradient);
+            color: white;
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(239, 68, 68, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 2px dashed var(--glass-border);
+            border-radius: 1.5rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .no-results i {
+            font-size: 3rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .no-results p {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .dashboard-header {
+                padding: 1.5rem;
+            }
+
+            .header-actions {
+                flex-direction: column;
+            }
+
+            .header-actions .btn {
+                width: 100%;
+                justify-content: center;
+        }
+
+            .role-section {
+                padding: 1.5rem;
+            }
+        }
+
+        .upload-section {
+            margin-bottom: 3rem;
+        }
+
+        .upload-zone {
+            position: relative;
+            width: 100%;
+            min-height: 240px;
+            border: 2px dashed var(--glass-border);
+            border-radius: 1.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--primary-color);
+            background: var(--glass-bg);
+            transform: scale(1.02);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .upload-content {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-primary);
+        }
+
+        .upload-content i {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.3));
+        }
+
+        .upload-text {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .selected-file {
+            font-size: 0.875rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            display: none;
+        }
+
+        .file-selected .upload-text {
+            display: none;
+        }
+
+        .file-selected .selected-file {
+            display: block;
+        }
+
+        /* Stats Section Styles */
+        .stats-section {
+            margin-top: 2rem;
+        }
+
+        .stats-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: 0.15;
+            z-index: 0;
+        }
+
+        /* Specific gradients for each stats card */
+        .stats-card.admin-stats::before {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+        }
+
+        .stats-card.teacher-stats::before {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+        }
+
+        .stats-card.student-stats::before {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .stats-icon {
+            position: relative;
+            z-index: 1;
+            width: 80px;
+            height: 80px;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Specific colors for each stats icon */
+        .admin-stats .stats-icon {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .teacher-stats .stats-icon {
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .student-stats .stats-icon {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .stats-card:hover .stats-icon {
+            transform: scale(1.1) rotate(10deg);
+        }
+
+        .stats-info {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+        }
+
+        .stats-info h3 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+            letter-spacing: -0.05em;
+            color: var(--text-primary);
+        }
+
+        /* Specific gradients for each stats number */
+        .admin-stats .stats-info h3 {
+            background: linear-gradient(135deg, #ef4444, #f87171);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+        }
+
+        .teacher-stats .stats-info h3 {
+            background: linear-gradient(135deg, #22c55e, #4ade80);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(34, 197, 94, 0.3);
+        }
+
+        .student-stats .stats-info h3 {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .stats-info p {
+            margin: 0.75rem 0 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            opacity: 0.9;
+        }
+
+        /* Dark mode specific styles */
+        [data-theme="dark"] .stats-info h3 {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="dark"] .stats-info p {
+            color: var(--text-primary);
+            opacity: 0.95;
+        }
+
+        /* Update text visibility in dark mode */
+        [data-theme="dark"] .user-details h4 {
+            color: var(--text-primary);
+            font-weight: 600;
+            text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
+        }
+
+        [data-theme="dark"] .user-meta {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .meta-item {
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .btn {
+            text-shadow: none;
+        }
+
+        [data-theme="dark"] .btn-outline-primary,
+        [data-theme="dark"] .btn-outline-danger {
+            color: white;
+            border-width: 2px;
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] .role-badge {
+            color: white;
+            font-weight: 600;
+            text-shadow: none;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px var(--shadow-color);
+        }
+
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table thead th {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .table tbody td {
+            border-color: var(--border-color);
+            background: var(--bg-card);
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .form-control {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--input-text);
+        }
+
+        .form-control:focus {
+            background: var(--input-bg);
+            border-color: var(--primary-color);
+            color: var(--input-text);
+            box-shadow: 0 0 0 4px var(--input-focus);
+        }
+
+        /* User card styles */
+        .user-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .user-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .user-details h4 {
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .user-meta {
+            color: var(--text-secondary);
+        }
+
+        /* Empty state styles */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 2px dashed var(--glass-border);
+            border-radius: 1.5rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* Stats card styles */
+        .stats-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .stats-card {
+            background: var(--glass-bg);
+        }
+
+        .stats-info h3, 
+        .stats-info p {
+            color: var(--text-primary);
+        }
+
+        /* Role badges */
+        .role-badge {
+            background: var(--glass-bg);
+            padding: 0.625rem 1.25rem;
+            border-radius: 2rem;
+            font-weight: 600;
+        }
+
+        .role-admin {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .role-teacher {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success-color);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        .role-student {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        /* User icons */
+        .user-icon {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+        }
+
+        .admin-icon {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+        }
+
+        .teacher-icon {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--success-color);
+        }
+
+        .student-icon {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+        }
+
+        /* Search input */
+        .search-input {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-icon {
+            color: var(--text-secondary);
+        }
+
+        /* Alert styles */
+        .alert {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Upload zone */
+        .upload-zone {
+            background: var(--glass-bg);
+            border: 2px dashed var(--glass-border);
+            color: var(--text-primary);
+        }
+
+        .upload-text {
+            color: var(--text-primary);
+        }
+
+        /* Stats section */
+        .stats-section .stats-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+        }
+
+        .stats-section .stats-icon {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Make sure text is visible in dark mode */
+        [data-theme="dark"] .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Dark mode specific overrides */
+        [data-theme="dark"] .btn-outline-primary {
+            border-color: var(--primary-light);
+            color: var(--primary-light);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        [data-theme="dark"] .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        [data-theme="dark"] .btn-outline-danger {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background: var(--danger-gradient);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Update action buttons container */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            position: relative;
+            z-index: 1;
+        }
+
+        .action-buttons .btn {
+            flex: 1;
+            justify-content: center;
+            min-width: 100px;
+        }
+
+        .action-buttons .btn i {
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .action-buttons .btn:hover i {
+            transform: translateX(2px);
+        }
+
+        /* Add glow effect on hover */
+        [data-theme="dark"] .btn-outline-primary:hover {
+            box-shadow: 
+                0 8px 16px rgba(99, 102, 241, 0.2),
+                0 0 0 1px rgba(99, 102, 241, 0.2);
+        }
+
+        [data-theme="dark"] .btn-outline-danger:hover {
+            box-shadow: 
+                0 8px 16px rgba(239, 68, 68, 0.2),
+                0 0 0 1px rgba(239, 68, 68, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Move theme toggle button to top -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                <h1 class="dashboard-title">
+                    <i class="fas fa-user-shield"></i>
+                    Admin Dashboard
+                </h1>
+                <div class="header-actions">
+                    <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i>Add User
+                    </a>
+                    <a href="{{ url_for('add_subject') }}" class="btn btn-success">
+                        <i class="fas fa-book"></i>Add Subject
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-info">
+                        <i class="fas fa-home"></i>Main Dashboard
+                    </a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt"></i>Logout
+                    </a>
+                </div>
+            </div>
+            <div class="stats-section mt-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="stats-card admin-stats">
+                            <div class="stats-icon">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            <div class="stats-info">
+                                <h3>{{ admin_count }}</h3>
+                                <p>Administrators</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card teacher-stats">
+                            <div class="stats-icon">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
+                            <div class="stats-info">
+                                <h3>{{ teacher_count }}</h3>
+                                <p>Teachers</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stats-card student-stats">
+                            <div class="stats-icon">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <div class="stats-info">
+                                <h3>{{ student_count }}</h3>
+                                <p>Students</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Admin Section -->
+        <div class="role-section admin-section">
+            <h2 class="section-title">
+                <i class="fas fa-user-shield"></i>
+                Administrators
+            </h2>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input admin-search" placeholder="Search administrators...">
+            </div>
+            <div class="users-container">
+                {% for user in users if user.role == 'admin' %}
+                    <div class="user-card" data-search="{{ user.username.lower() }}">
+                        <div class="user-info">
+                            <div class="user-icon admin-icon">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4>{{ user.username }}</h4>
+                                <div class="user-role">
+                                    <span class="role-badge role-admin">
+                                        <i class="fas fa-shield-alt"></i>
+                                        Administrator
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </a>
+                            <a href="{{ url_for('delete_user', user_id=user.user_id) }}" 
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Are you sure you want to delete this administrator?')">
+                                <i class="fas fa-trash-alt"></i>
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-user-shield"></i>
+                        <p>No administrators found</p>
+                    </div>
+                {% endfor %}
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <p>No administrators found matching your search</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Teacher Section -->
+        <div class="role-section teacher-section">
+            <h2 class="section-title">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Teachers
+            </h2>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input teacher-search" placeholder="Search teachers...">
+            </div>
+            <div class="users-container">
+                {% for user in users if user.role == 'teacher' %}
+                    <div class="user-card" data-search="{{ user.username.lower() }}">
+                        <div class="user-info">
+                            <div class="user-icon teacher-icon">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4>{{ user.username }}</h4>
+                                <div class="user-role">
+                                    <span class="role-badge role-teacher">
+                                        <i class="fas fa-chalkboard"></i>
+                                        Teacher
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </a>
+                            <a href="{{ url_for('delete_user', user_id=user.user_id) }}" 
+                               class="btn btn-sm btn-outline-danger" 
+                               onclick="return confirm('Are you sure you want to delete this teacher?')">
+                                <i class="fas fa-trash-alt"></i>
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <p>No teachers found</p>
+                    </div>
+                {% endfor %}
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <p>No teachers found matching your search</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Section -->
+        <div class="role-section student-section">
+            <h2 class="section-title">
+                <i class="fas fa-user-graduate"></i>
+                Students
+            </h2>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input student-search" placeholder="Search students...">
+            </div>
+            <div class="users-container">
+                {% for user in users if user.role == 'student' %}
+                    <div class="user-card" data-search="{{ user.username.lower() }}">
+                        <div class="user-info">
+                            <div class="user-icon student-icon">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4>{{ user.username }}</h4>
+                                <div class="user-role">
+                                    <span class="role-badge role-student">
+                                        <i class="fas fa-graduation-cap"></i>
+                                        Student
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-school"></i>
+                                Class: {{ user.class if user.class else 'Not Assigned' }}
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-users"></i>
+                                Section: {{ user.section if user.section else 'Not Assigned' }}
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </a>
+                            <a href="{{ url_for('delete_user', user_id=user.user_id) }}" 
+                               class="btn btn-sm btn-outline-danger"
+                               onclick="return confirm('Are you sure you want to delete this student?')">
+                                <i class="fas fa-trash-alt"></i>
+                                Delete
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-user-graduate"></i>
+                        <p>No students found</p>
+                    </div>
+                {% endfor %}
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <p>No students found matching your search</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="role-section upload-section" style="margin-bottom: 2rem;">
+            <h2 class="section-title">
+                <i class="fas fa-file-upload"></i>
+                Bulk Upload Users
+            </h2>
+            <p class="text-muted mb-4">Upload multiple users at once using Excel (.xlsx, .xls) or CSV files</p>
+            
+            <form action="{{ url_for('upload_users') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+                <div class="upload-zone" id="dropZone">
+                    <input type="file" name="excel_file" id="excelFile" class="file-input" accept=".xlsx,.xls,.csv" required>
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <div class="upload-text">Drop Excel/CSV file here or click to browse</div>
+                        <div id="selectedFileName" class="selected-file"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">
+                    <i class="fas fa-upload me-2"></i>
+                    Upload Users
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        function setupSearch(inputClass, cardSelector) {
+            const searchInput = document.querySelector(inputClass);
+            const cards = document.querySelectorAll(cardSelector);
+            const noResults = searchInput.closest('.role-section').querySelector('.no-results');
+
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                let hasResults = false;
+
+                cards.forEach(card => {
+                    const searchText = card.getAttribute('data-search');
+                    const isMatch = searchText.includes(searchTerm);
+                    card.style.display = isMatch ? '' : 'none';
+                    if (isMatch) hasResults = true;
+                });
+
+                noResults.style.display = hasResults ? 'none' : 'block';
+            });
+        }
+
+        // Initialize search for each section
+        document.addEventListener('DOMContentLoaded', function() {
+            setupSearch('.admin-search', '.admin-section .user-card');
+            setupSearch('.teacher-search', '.teacher-section .user-card');
+            setupSearch('.student-search', '.student-section .user-card');
+        });
+
+        // Excel upload functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('excelFile');
+        const selectedFileName = document.getElementById('selectedFileName');
+
+        function handleFile(file) {
+            if (file && file.name.match(/\.(xlsx|xls|csv)$/)) {
+                selectedFileName.textContent = file.name;
+                dropZone.classList.add('file-selected');
+            } else {
+                selectedFileName.textContent = '';
+                dropZone.classList.remove('file-selected');
+                if (file) {
+                    alert('Please select an Excel (.xlsx, .xls) or CSV file');
+                    fileInput.value = '';
+                }
+            }
+        }
+
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Prevent the default file opening behavior when dropping files
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', (e) => e.preventDefault());
+
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('admin-dashboard-theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('admin-dashboard-theme', 'dark');
+            }
+        }
+
+        // Initialize theme from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('admin-dashboard-theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+            }
+        });
+    </script>
+</body>
+</html>

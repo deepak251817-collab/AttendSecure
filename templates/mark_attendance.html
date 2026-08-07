@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --hover-bg: #f1f5f9;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #94a3b8;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border-color: #334155;
+            --hover-bg: #334155;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-main);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: var(--bg-card);
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px var(--shadow-color),
+                       0 2px 4px -1px var(--shadow-color);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--info-color));
+        }
+
+        .page-title {
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 0;
+        }
+
+        .page-title i {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+        }
+
+        .filters-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color),
+                       0 2px 4px -1px var(--shadow-color);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .filters-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary-color), var(--info-color));
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .form-label i {
+            color: var(--primary-color);
+        }
+
+        .form-control, .form-select {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            border: none;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #16a34a;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            border: none;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            border: none;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+
+        .table-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px var(--shadow-color);
+            margin-top: 2rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .table {
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .table th {
+            background: var(--bg-main);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 1rem;
+            white-space: nowrap;
+            border-bottom: 2px solid var(--border-color);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-card);
+            font-size: 0.95rem;
+        }
+
+        .table tbody tr:hover {
+            background: var(--hover-bg);
+        }
+
+        .mark-all-options {
+            background: var(--bg-main);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .status-options {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .status-option {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .status-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .status-option.present .status-label {
+            background: #dcfce7;
+            color: #166534;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #86efac;
+        }
+
+        .status-option.absent .status-label {
+            background: #fee2e2;
+            color: #991b1b;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #fca5a5;
+        }
+
+        .status-option.approved-leave .status-label {
+            background: #3b82f6;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes click-effect {
+            0% {
+                transform: scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .status-label::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+        }
+
+        .status-option input[type="radio"]:checked + .status-label::after {
+            animation: click-effect 0.5s ease-out;
+        }
+
+        .status-option input[type="radio"]:checked + .status-label {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: bright-pulse 0.3s ease-in-out;
+        }
+
+        @keyframes bright-pulse {
+            0% {
+                filter: brightness(100%);
+            }
+            50% {
+                filter: brightness(120%);
+            }
+            100% {
+                filter: brightness(100%);
+            }
+        }
+
+        .status-option.present input[type="radio"]:checked + .status-label {
+            background: #22c55e;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+            border: none;
+        }
+
+        .status-option.absent input[type="radio"]:checked + .status-label {
+            background: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            border: none;
+        }
+
+        .status-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            justify-content: center;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .status-option:hover .status-label {
+            transform: translateY(-1px);
+        }
+
+        .status-option.present:hover .status-label {
+            background: #bbf7d0;
+        }
+
+        .status-option.absent:hover .status-label {
+            background: #fecaca;
+        }
+
+        .action-buttons {
+            padding: 1.5rem;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--bg-card);
+            border: none;
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px var(--shadow-color);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .alert {
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+                border-radius: 16px;
+            }
+
+            .filters-card {
+                padding: 1rem;
+            }
+
+            .mark-all-options {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                justify-content: center;
+            }
+
+            .status-options {
+                flex-direction: column;
+            }
+
+            .status-label {
+                width: 100%;
+            }
+
+            .table-responsive {
+                margin: 0 -1rem;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon"></i>
+    </button>
+
+<div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="alert alert-{{ messages[0][0] }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{% if messages[0][0] == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-2"></i>
+                {{ messages[0][1] }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="page-title">
+                <i class="fas fa-user-check"></i>
+                Mark Attendance
+            </h1>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+
+        <div class="filters-card">
+            <form method="POST" class="row g-3">
+                <div class="col-md-6">
+                    <label for="class" class="form-label">
+                        <i class="fas fa-school"></i>
+                        Class
+                    </label>
+                    <select class="form-select" id="class" name="class" required>
+                    <option value="">Select Class</option>
+                        {% for class_name in classes %}
+                        <option value="{{ class_name }}" {% if selected_class == class_name %}selected{% endif %}>
+                            {{ class_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+                <div class="col-md-6">
+                    <label for="section" class="form-label">
+                        <i class="fas fa-users"></i>
+                        Section
+                    </label>
+                    <select class="form-select" id="section" name="section" required>
+                    <option value="">Select Section</option>
+                        {% for section_name in sections %}
+                        <option value="{{ section_name }}" {% if selected_section == section_name %}selected{% endif %}>
+                            {{ section_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+                <div class="col-md-6">
+                    <label for="subject_id" class="form-label">
+                        <i class="fas fa-book"></i>
+                        Subject
+                    </label>
+                    <select class="form-select" id="subject_id" name="subject_id" required>
+                    <option value="">Select Subject</option>
+                    {% for subject in teacher_subjects %}
+                        <option value="{{ subject.subject_id }}" {% if selected_subject_id == subject.subject_id|string %}selected{% endif %}>
+                            {{ subject.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+                <div class="col-md-3">
+                    <label for="attendance_date" class="form-label">
+                        <i class="fas fa-calendar"></i>
+                        Date
+                    </label>
+                    <input type="date" class="form-select" id="attendance_date" name="attendance_date" value="{{ selected_date }}" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="attendance_time" class="form-label">
+                        <i class="fas fa-clock"></i>
+                        Time
+                    </label>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="hour" name="hour" required>
+                            <option value="">Hour</option>
+                            {% for h in range(1, 13) %}
+                                <option value="{{ '%02d' % h }}">{{ h }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select" id="minute" name="minute" required>
+                            <option value="">Min</option>
+                            {% for m in range(0, 60, 5) %}
+                                <option value="{{ '%02d' % m }}">{{ '%02d' % m }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select" id="period" name="period" required>
+                            <option value="AM">AM</option>
+                            <option value="PM">PM</option>
+                        </select>
+                        <input type="hidden" id="attendance_time" name="attendance_time" value="{{ selected_time }}">
+                    </div>
+        </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i>
+                        Get Students
+                    </button>
+            </div>
+            </form>
+        </div>
+
+    {% if students %}
+        <div class="table-card">
+            <form action="{{ url_for('submit_attendance') }}" method="POST">
+        <input type="hidden" name="class" value="{{ selected_class }}">
+        <input type="hidden" name="section" value="{{ selected_section }}">
+        <input type="hidden" name="subject_id" value="{{ selected_subject_id }}">
+        <input type="hidden" name="attendance_date" value="{{ selected_date }}">
+                <input type="hidden" name="attendance_time" value="{{ selected_time }}">
+                <input type="hidden" name="hour" id="submit_hour">
+                <input type="hidden" name="minute" id="submit_minute">
+                <input type="hidden" name="period" id="submit_period">
+
+                <div class="mark-all-options">
+                    <button type="button" class="btn btn-success" onclick="markAllPresent()">
+                        <i class="fas fa-check"></i>
+                        Mark All Present
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="markAllAbsent()">
+                        <i class="fas fa-times"></i>
+                        Mark All Absent
+                    </button>
+                </div>
+
+        <div class="table-responsive">
+                    <table class="table">
+                <thead>
+                    <tr>
+                                <th>
+                                    <i class="fas fa-user me-2"></i>
+                                    Student Name
+                                </th>
+                                <th>
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Status
+                                </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.username }}</td>
+                            <td>
+                                    {% if student.marked_status == 'Approved Leave' %}
+                                        <div class="status-option approved-leave">
+                                            <input type="hidden" name="status_{{ student.user_id }}" value="Approved Leave">
+                                            <span class="status-label">
+                                                <i class="fas fa-calendar-check"></i>
+                                                Approved Leave
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <label class="status-option present">
+                                            <input type="radio" name="status_{{ student.user_id }}" value="Present"
+                                                   {% if student.marked_status == 'Present' %}checked{% endif %} required>
+                                            <span class="status-label">
+                                                <i class="fas fa-check"></i>
+                                                Present
+                                            </span>
+                                        </label>
+                                        <label class="status-option absent">
+                                            <input type="radio" name="status_{{ student.user_id }}" value="Absent"
+                                                   {% if student.marked_status == 'Absent' %}checked{% endif %} required>
+                                            <span class="status-label">
+                                                <i class="fas fa-times"></i>
+                                                Absent
+                                            </span>
+                                        </label>
+                                    {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary" onclick="updateSubmitTime()">
+                        <i class="fas fa-save"></i>
+                        Submit Attendance
+                    </button>
+                </div>
+    </form>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.querySelector('.theme-toggle i');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('mark-attendance-theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('mark-attendance-theme', 'dark');
+            }
+        }
+
+        // Initialize theme from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('mark-attendance-theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const hourSelect = document.getElementById('hour');
+            const minuteSelect = document.getElementById('minute');
+            const periodSelect = document.getElementById('period');
+            const timeInput = document.getElementById('attendance_time');
+
+            // Set initial values if time is already selected
+            if (timeInput.value) {
+                const [hours24, minutes] = timeInput.value.split(':');
+                let hours = parseInt(hours24);
+                let period = 'AM';
+                
+                if (hours >= 12) {
+                    period = 'PM';
+                    hours = hours > 12 ? hours - 12 : hours;
+                } else if (hours === 0) {
+                    hours = 12;
+                }
+                
+                hourSelect.value = String(hours).padStart(2, '0');
+                minuteSelect.value = minutes;
+                periodSelect.value = period;
+            }
+
+            // Update hidden input whenever any select changes
+            function updateTime() {
+                if (hourSelect.value && minuteSelect.value && periodSelect.value) {
+                    let hours = parseInt(hourSelect.value);
+                    const period = periodSelect.value;
+                    
+                    // Convert to 24-hour format
+                    if (period === 'PM' && hours !== 12) {
+                        hours += 12;
+                    } else if (period === 'AM' && hours === 12) {
+                        hours = 0;
+                    }
+                    
+                    timeInput.value = `${String(hours).padStart(2, '0')}:${minuteSelect.value}`;
+                }
+            }
+
+            hourSelect.addEventListener('change', updateTime);
+            minuteSelect.addEventListener('change', updateTime);
+            periodSelect.addEventListener('change', updateTime);
+        });
+
+        function updateSubmitTime() {
+            document.getElementById('submit_hour').value = document.getElementById('hour').value;
+            document.getElementById('submit_minute').value = document.getElementById('minute').value;
+            document.getElementById('submit_period').value = document.getElementById('period').value;
+        }
+
+        // Mark all present/absent functions
+    function markAllPresent() {
+            document.querySelectorAll('input[type="radio"][value="Present"]').forEach(radio => {
+                if (!radio.disabled) radio.checked = true;
+            });
+    }
+
+    function markAllAbsent() {
+            document.querySelectorAll('input[type="radio"][value="Absent"]').forEach(radio => {
+                if (!radio.disabled) radio.checked = true;
+            });
+    }
+</script>
+</body>
+</html>
