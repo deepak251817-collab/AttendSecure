@@ -7,7 +7,7 @@
 4. [System Architecture](#system-architecture)
 5. [Setup Instructions](#setup-instructions)
 6. [Features and Functionality](#features-and-functionality)
-7. [API Documentation](#api-documentation)
+7. [Application Routes](#application-routes)
 8. [Database Schema Details](#database-schema-details)
 9. [Security Implementation](#security-implementation)
 
@@ -26,21 +26,21 @@ The Attendance Management System is a comprehensive web-based application design
 ## Technology Stack
 
 ### Backend
-- **Framework**: Flask 3.0.2 (Python web framework)
-- **WSGI Server**: Werkzeug 3.0.1
-- **Database ORM**: SQLAlchemy 2.0.27
+- **Framework**: Flask 3.x (Python web framework)
+- **WSGI Server**: Werkzeug 3.x
 - **Data Processing**: 
-  - Pandas 2.2.0
-  - PyArrow 15.0.0
-- **Environment Management**: python-dotenv 1.0.1
+  - Pandas 2.x
+  - openpyxl 3.x
+- **Security**: Werkzeug password hashing (sha256)
 
 ### Database
-- **Primary Database**: MySQL
-- **Migration Source**: SQLite
+- **Primary Database**: SQLite (default)
+- **Migration Target**: MySQL (via migrate_to_mysql.py)
 - **Database Features**:
   - Foreign key constraints
   - Data integrity checks
   - Transaction support
+  - Indexes for query performance
 
 ## Database Design
 
@@ -210,8 +210,7 @@ CREATE TABLE leave_requests (
 
 ### Prerequisites
 1. Python 3.x
-2. MySQL Server
-3. Virtual Environment
+2. Virtual Environment
 
 ### Installation Steps
 1. Clone the repository
@@ -225,15 +224,18 @@ CREATE TABLE leave_requests (
    ```bash
    pip install -r requirements.txt
    ```
-4. Configure environment variables:
-   - Create `.env` file
-   - Set database credentials
-   - Configure application settings
-
-5. Database setup:
+4. Initialize the SQLite database:
    ```bash
-   python migrate_to_mysql.py
+   python reset_db.py
    ```
+5. Start the application:
+   ```bash
+   flask run
+   ```
+6. Open http://127.0.0.1:5000 in your browser
+7. Login with default credentials (admin / admin123)
+
+**Note**: MySQL migration is optional. The app uses SQLite by default. To migrate to MySQL, run `python migrate_to_mysql.py` after installing `mysql-connector-python` and setting up a MySQL server.
 
 ## Features and Functionality
 
@@ -257,22 +259,44 @@ CREATE TABLE leave_requests (
 - View attendance reports
 - Update profile
 
-## API Documentation
+## Application Routes
 
-### Authentication Endpoints
-- POST /api/login
-- POST /api/logout
-- POST /api/reset-password
+### Authentication Routes
+- `GET /` - Home page (redirects to login or dashboard)
+- `GET/POST /login` - User login
+- `GET /logout` - User logout
+- `GET/POST /reset_password/<int:user_id>` - Admin resets a user's password
 
-### Attendance Endpoints
-- POST /api/attendance/mark
-- GET /api/attendance/view
-- GET /api/attendance/report
+### Dashboard Routes
+- `GET /dashboard` - Role-based dashboard (admin/teacher/student)
+- `GET /admin_dashboard` - Admin overview dashboard
 
-### Leave Management Endpoints
-- POST /api/leave/request
-- PUT /api/leave/approve
-- GET /api/leave/status
+### User Management Routes
+- `GET/POST /add_user` - Add a new user
+- `GET/POST /edit_user/<int:user_id>` - Edit user details
+- `GET /delete_user/<int:user_id>` - Delete a user
+- `POST /upload_users` - Bulk import users from CSV/Excel
+
+### Subject Management Routes
+- `GET/POST /add_subject` - Add a new subject
+- `GET/POST /assign_subject` - Assign subjects to teachers (via templates)
+
+### Attendance Routes
+- `GET/POST /mark_attendance` - Mark attendance (teacher)
+- `POST /submit_attendance` - Submit attendance records
+- `GET/POST /view_attendance` - View combined attendance records
+- `GET /my_attendance` - Student's own attendance
+- `GET/POST /edit_attendance/<int:id>` - Edit an attendance record
+- `GET/POST /edit_attendance_by_info/<username>/<date>` - Edit attendance by username and date
+- `GET /monthly_summary` - Monthly attendance summary
+- `GET/POST /attendance_summary` - Overall attendance summary
+- `GET/POST /low_attendance` - View students with low attendance
+- `GET /export_attendance_report` - Export attendance to CSV/Excel
+
+### Leave Management Routes
+- `GET/POST /request_leave` - Student requests leave
+- `GET/POST /view_leave_requests` - View leave requests (teacher/admin)
+- `POST /handle_leave_request` - Approve/deny a leave request
 
 ## Database Migration
 
