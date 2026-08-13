@@ -58,3 +58,4 @@ A Flask-based attendance and leave-management web application for admins, teache
 ## Cleanup
 - Keep source files, templates, and schema files under version control.
 - Leave generated runtime files out of the repository.
+project name : Attendance- System 
