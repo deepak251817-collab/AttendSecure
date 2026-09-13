@@ -31,7 +31,7 @@ The Attendance Management System is a comprehensive web-based application design
 - **Data Processing**: 
   - Pandas 2.x
   - openpyxl 3.x
-- **Security**: Werkzeug password hashing (sha256)
+- **Security**: Werkzeug password hashing (PBKDF2-SHA256)
 
 ### Database
 - **Primary Database**: SQLite (default)
@@ -233,7 +233,7 @@ CREATE TABLE leave_requests (
    flask run
    ```
 6. Open http://127.0.0.1:5000 in your browser
-7. Login with default credentials (admin / admin123)
+7. Run `python reset_db.py` and use the admin password supplied or generated during setup
 
 **Note**: MySQL migration is optional. The app uses SQLite by default. To migrate to MySQL, run `python migrate_to_mysql.py` after installing `mysql-connector-python` and setting up a MySQL server.
 

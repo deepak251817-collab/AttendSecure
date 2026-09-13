@@ -1,11 +1,51 @@
-.venv/
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+.flask_secret_key
+*.pem
+*.key
+*.crt
+secrets/
+
+# Runtime data
 *.db
 *.sqlite
 *.sqlite3
-.pytest_cache/
-.mypy_cache/
+instance/
+uploads/*
+!uploads/.gitkeep
+logs/
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
-uploads/*
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Local migration / export files
+*.sql.gz
+*.bak
+*.zip

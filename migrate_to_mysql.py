@@ -1,6 +1,9 @@
 import sqlite3
-import mysql.connector
-from mysql.connector import Error
+try:
+    import mysql.connector
+    from mysql.connector import Error
+except ImportError as exc:
+    raise SystemExit("MySQL migration is optional. Install mysql-connector-python first.") from exc
 
 def get_sqlite_data():
     try:

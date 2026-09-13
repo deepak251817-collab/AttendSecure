@@ -85,6 +85,6 @@ CREATE INDEX IF NOT EXISTS idx_leave_requests_status ON leave_requests(status);
 CREATE INDEX IF NOT EXISTS idx_teacher_subjects_teacher ON teacher_subjects(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
--- Insert default admin user (password: admin123)
-INSERT OR IGNORE INTO users (username, password, role) 
-VALUES ('admin', 'pbkdf2:sha256:600000$vkPt2MZhhR6QYWvE$962c3ab9f0a5a43c62b87c33f7380a359e16e0e0d7c32f0f7b2b2c7c2f2b2b2', 'admin'); 
+-- Admin credentials are created by reset_db.py, never stored in the schema.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_unique
+    ON attendance(student_id, subject_id, date);

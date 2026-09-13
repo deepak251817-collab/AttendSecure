@@ -1,48 +1,50 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
-import sqlite3, os
-from werkzeug.utils import secure_filename
-from werkzeug.security import check_password_hash, generate_password_hash
-import pandas as pd
-from io import BytesIO
-from flask import send_file
-import zipfile
-import tempfile
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 import csv
+import os
+import secrets
+import sqlite3
+import zipfile
+from io import BytesIO
+from pathlib import Path
+
+import pandas as pd
+from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
+
+BASE_DIR = Path(__file__).resolve().parent
+
+def _get_secret_key():
+    """Load a stable secret from the environment or a local ignored file."""
+    env_key = os.getenv("FLASK_SECRET_KEY")
+    if env_key:
+        return env_key
+    secret_file = BASE_DIR / ".flask_secret_key"
+    if secret_file.exists():
+        return secret_file.read_text(encoding="utf-8").strip()
+    key = secrets.token_hex(32)
+    secret_file.write_text(key, encoding="utf-8")
+    return key
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # Generate a secure random key
+app.secret_key = _get_secret_key()
+app.config.update(
+    UPLOAD_FOLDER=str(BASE_DIR / "uploads"),
+    ALLOWED_EXTENSIONS={"csv", "xlsx", "xls"},
+    MAX_CONTENT_LENGTH=5 * 1024 * 1024,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
 _database_initialized = False
 
-# Password hashing method
 def hash_password(password):
-    return generate_password_hash(password, method='sha256')
+    return generate_password_hash(password, method="pbkdf2:sha256")
 
 def verify_password(pwhash, password):
     try:
-        # First try normal verification
         return check_password_hash(pwhash, password)
-    except ValueError as e:
-        if "unsupported hash type scrypt" in str(e):
-            # If it's an old scrypt hash, consider it a match if the password is correct
-            # and update to new hash format
-            if password == "password":  # Default password for migration
-                return True
-            return False
-        raise e
-
-def migrate_user_password(user_id, new_password):
-    """Migrate a user's password to the new hash format"""
-    conn = get_db()
-    try:
-        new_hash = hash_password(new_password)
-        conn.execute("UPDATE users SET password = ? WHERE user_id = ?", (new_hash, user_id))
-        conn.commit()
-        return True
-    except Exception as e:
-        print(f"Error migrating password: {e}")
+    except (ValueError, TypeError):
         return False
-    finally:
-        conn.close()
 
 # Set upload folder and allowed extensions
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -58,13 +60,12 @@ def allowed_file(filename):
 
 # Function to get DB connection
 def get_db():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_dir = os.path.join(BASE_DIR, "database")
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir)
-    db_path = os.path.join(db_dir, "attendance.db")
-    conn = sqlite3.connect(db_path)
+    configured_path = os.getenv("ATTENDANCE_DB_PATH")
+    db_path = Path(configured_path).expanduser() if configured_path else BASE_DIR / "database" / "attendance.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
@@ -73,8 +74,7 @@ def ensure_database():
     if _database_initialized:
         return
 
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    schema_path = os.path.join(BASE_DIR, "database", "schemas", "schema.sql")
+    schema_path = BASE_DIR / "database" / "schemas" / "schema.sql"
 
     conn = get_db()
     try:
@@ -108,6 +108,7 @@ def upload_users():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
+        Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
@@ -258,6 +259,17 @@ def export_attendance_report():
 def home():
     return redirect("/login")
 
+@app.route("/health")
+def health():
+    """Simple health endpoint for local checks and deployment monitoring."""
+    try:
+        conn = get_db()
+        conn.execute("SELECT 1").fetchone()
+        conn.close()
+        return jsonify({"status": "ok", "service": "attendance-system"}), 200
+    except Exception:
+        return jsonify({"status": "error", "service": "attendance-system"}), 503
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -272,10 +284,7 @@ def login():
             return render_template("login.html")
         
         if verify_password(user["password"], password):
-            # If using old hash format, migrate to new format
-            if "scrypt" in user["password"]:
-                migrate_user_password(user["user_id"], password)
-            
+            session.clear()
             session["user_id"] = user["user_id"]
             session["username"] = user["username"]
             session["role"] = user["role"]
@@ -400,11 +409,7 @@ def mark_attendance():
             hour = int(request.form.get("hour", "0"))
             minute = request.form.get("minute", "00")
             period = request.form.get("period", "AM").upper()
-            
-            print(f"\nDEBUG - Time Input:")
-            print(f"Original Input - Hour: {hour}, Minute: {minute}, Period: {period}")
-        
-            # Convert to 24-hour format
+
             if period == "PM":
                 if hour != 12:
                     hour = hour + 12
@@ -413,10 +418,10 @@ def mark_attendance():
             
             # Format time as HH:MM
             attendance_time = f"{hour:02d}:{minute}"
-            print(f"Converted for storage: {attendance_time}")
-        except Exception as e:
-            print(f"Error processing time: {str(e)}")
+            selected_time = attendance_time
+        except (TypeError, ValueError):
             attendance_time = "00:00"
+            selected_time = attendance_time
 
         # Verify teacher is assigned to this subject
         subject_check = conn.execute("""
@@ -495,17 +500,30 @@ def submit_attendance():
     section = request.form.get('section')
     subject_id = request.form.get('subject_id')
     attendance_date = request.form.get('attendance_date')
+
+    conn = get_db()
+    teacher = conn.execute(
+        "SELECT teacher_id FROM teachers WHERE user_id = ?", (session['user_id'],)
+    ).fetchone()
+    if not teacher:
+        conn.close()
+        flash("Teacher record not found.", "error")
+        return redirect(url_for("dashboard"))
+    assigned = conn.execute(
+        "SELECT 1 FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?",
+        (teacher['teacher_id'], subject_id),
+    ).fetchone()
+    if not assigned:
+        conn.close()
+        flash("You are not assigned to this subject.", "error")
+        return redirect(url_for("mark_attendance"))
     
     # Get time components and convert to 24-hour format
     try:
         hour = int(request.form.get("hour", "0"))
         minute = request.form.get("minute", "00")
         period = request.form.get("period", "AM").upper()
-        
-        print(f"\nDEBUG - Time Input:")
-        print(f"Original Input - Hour: {hour}, Minute: {minute}, Period: {period}")
-    
-        # Convert to 24-hour format
+
         if period == "PM":
             if hour != 12:
                 hour = hour + 12
@@ -514,12 +532,9 @@ def submit_attendance():
         
         # Format time as HH:MM
         attendance_time = f"{hour:02d}:{minute}"
-        print(f"Converted for storage: {attendance_time}")
-    except Exception as e:
-        print(f"Error processing time: {str(e)}")
+    except (TypeError, ValueError):
         attendance_time = "00:00"
 
-    conn = get_db()
     cursor = conn.cursor()
 
     try:
@@ -647,11 +662,6 @@ def view_combined_attendance():
             (selected_class, selected_section, selected_subject_id, start_date, end_date)
         ).fetchall()
 
-        # Debug: Print raw database values
-        print("\nDEBUG - Raw Database Values:")
-        for record in students_attendance:
-            print(f"Student: {record['username']}, Date: {record['date']}, Raw Time: {record['time']}")
-
         # Convert time to 12-hour format for each record
         formatted_attendance = []
         for record in students_attendance:
@@ -676,9 +686,7 @@ def view_combined_attendance():
                         period = 'PM'
                     
                     record_dict['display_time'] = f"{display_hour:02d}:{minute:02d} {period}"
-                    print(f"Time conversion: {stored_hour:02d}:{minute:02d} -> {record_dict['display_time']}")
-                except Exception as e:
-                    print(f"Error converting time: {record['time']}, Error: {str(e)}")
+                except (TypeError, ValueError):
                     record_dict['display_time'] = record['time']
             else:
                 record_dict['display_time'] = None
@@ -821,96 +829,26 @@ def request_leave():
 
     return render_template("request_leave.html", teachers=teachers)
 
-@app.route("/view_leave_requests", methods=["GET", "POST"])
+@app.route("/view_leave_requests", methods=["GET"])
 def view_leave_requests():
-    if 'role' not in session or session['role'] != 'teacher':
+    if session.get("role") != "teacher":
         return redirect("/")
-
     conn = get_db()
-
-    # Fetch all pending leave requests with student details and reason
-    leave_requests = conn.execute("""
-        SELECT leave_requests.id, users.username, leave_requests.date, 
-               leave_requests.status, leave_requests.reason
-        FROM leave_requests 
-        JOIN users ON leave_requests.student_id = users.user_id 
-        ORDER BY 
-            CASE leave_requests.status 
-                WHEN 'Pending' THEN 1 
-                WHEN 'Approved' THEN 2 
-                ELSE 3 
-            END,
-            leave_requests.date DESC
-    """).fetchall()
-
-    if request.method == "POST":
-        request_id = request.form["request_id"]
-        action = request.form["action"]
-
-        try:
-            conn.execute("BEGIN")
-            
-            # Update the leave request status
-            conn.execute("""
-                UPDATE leave_requests 
-                SET status = ? 
-                WHERE id = ?
-            """, (action, request_id))
-            
-            if action == "Approve":
-                # Get the student ID and date from the leave request
-                leave_request = conn.execute("""
-                    SELECT student_id, date 
-                    FROM leave_requests 
-                    WHERE id = ?
-                """, (request_id,)).fetchone()
-                
-                # Get teacher's subjects
-                teacher_subjects = conn.execute("""
-                    SELECT subject_id 
-                    FROM teacher_subjects 
-                    WHERE teacher_id = ?
-                """, (leave_request['teacher_id'],)).fetchall()
-                
-                # Update leave request status
-                conn.execute(
-                    "UPDATE leave_requests SET status = ? WHERE id = ?",
-                    (action, request_id)
-                )
-                
-                # If approved, update attendance status for all subjects of the teacher
-                if action == 'Approve':
-                    for subject in teacher_subjects:
-                        # Check if attendance record exists for this subject
-                        attendance = conn.execute("""
-                            SELECT id 
-                            FROM attendance 
-                            WHERE student_id = ? AND date = ? AND subject_id = ?
-                        """, (leave_request['student_id'], leave_request['date'], subject['subject_id'])).fetchone()
-                        
-                        if attendance:
-                            # Update existing attendance record
-                            conn.execute("""
-                                UPDATE attendance 
-                                SET status = 'Approved Leave'
-                                WHERE student_id = ? AND date = ? AND subject_id = ?
-                            """, (leave_request['student_id'], leave_request['date'], subject['subject_id']))
-                        else:
-                            # Create new attendance record
-                            conn.execute("""
-                                INSERT INTO attendance (student_id, date, status, subject_id)
-                                VALUES (?, ?, 'Approved Leave', ?)
-                            """, (leave_request['student_id'], leave_request['date'], subject['subject_id']))
-            
-            conn.commit()
-            flash(f"Leave request {action.lower()}d successfully!", "success")
-        except Exception as e:
-            conn.rollback()
-            flash(f"Error processing leave request: {str(e)}", "error")
-        
-        return redirect(url_for("view_leave_requests"))
-
-    return render_template("view_leave_requests.html", leave_requests=leave_requests)
+    try:
+        teacher = conn.execute("SELECT teacher_id FROM teachers WHERE user_id = ?", (session["user_id"],)).fetchone()
+        if not teacher:
+            flash("Teacher record not found.", "error")
+            return redirect(url_for("dashboard"))
+        leave_requests = conn.execute("""
+            SELECT lr.id, u.username, lr.date, lr.status, lr.reason
+            FROM leave_requests lr
+            JOIN users u ON lr.student_id = u.user_id
+            WHERE lr.teacher_id = ?
+            ORDER BY CASE lr.status WHEN 'Pending' THEN 1 WHEN 'Approved' THEN 2 ELSE 3 END, lr.date DESC
+        """, (teacher["teacher_id"],)).fetchall()
+        return render_template("view_leave_requests.html", leave_requests=leave_requests)
+    finally:
+        conn.close()
 
 @app.route("/attendance_summary", methods=["GET", "POST"])
 def attendance_summary():
@@ -1092,29 +1030,40 @@ def low_attendance():
 
 @app.route("/edit_attendance/<int:id>", methods=["GET", "POST"])
 def edit_attendance(id):
-    if 'role' not in session or session['role'] != 'teacher':
+    if session.get("role") != "teacher":
         return redirect("/")
 
     conn = get_db()
+    try:
+        teacher = conn.execute(
+            "SELECT teacher_id FROM teachers WHERE user_id = ?", (session["user_id"],)
+        ).fetchone()
+        if not teacher:
+            return "Teacher record not found", 404
 
-    if request.method == "POST":
-        new_status = request.form.get("status")
-        conn.execute("UPDATE attendance SET status = ? WHERE id = ?", (new_status, id))
-        conn.commit()
-        return redirect("/view_attendance")
+        record = conn.execute("""
+            SELECT a.id, a.date, a.status, a.subject_id, u.username
+            FROM attendance a
+            JOIN users u ON a.student_id = u.user_id
+            JOIN teacher_subjects ts ON ts.subject_id = a.subject_id
+            WHERE a.id = ? AND ts.teacher_id = ?
+        """, (id, teacher["teacher_id"])).fetchone()
 
-    # GET request: fetch existing attendance record
-    record = conn.execute("""
-        SELECT a.id, a.date, a.status, u.username
-        FROM attendance a
-        JOIN users u ON a.student_id = u.user_id
-        WHERE a.id = ?
-    """, (id,)).fetchone()
+        if not record:
+            return "Attendance record not found", 404
 
-    if not record:
-        return "Attendance record not found", 404
+        if request.method == "POST":
+            new_status = request.form.get("status")
+            if new_status not in {"Present", "Absent", "Approved Leave", "Leave", "Denied Leave"}:
+                flash("Invalid attendance status.", "error")
+                return redirect(request.url)
+            conn.execute("UPDATE attendance SET status = ? WHERE id = ?", (new_status, id))
+            conn.commit()
+            return redirect(url_for("view_combined_attendance"))
 
-    return render_template("edit_attendance.html", record=record)
+        return render_template("edit_attendance.html", record=record)
+    finally:
+        conn.close()
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -1428,26 +1377,99 @@ def logout():
 
 @app.route("/edit_attendance_by_info/<username>/<date>", methods=["GET", "POST"])
 def edit_attendance_by_info(username, date):
+    if session.get("role") != "teacher":
+        return redirect("/")
+
     conn = get_db()
-    if request.method == "POST":
-        new_status = request.form.get("status")
-        conn.execute("""
-            UPDATE attendance
-            SET status=?
-            WHERE student_id = (SELECT user_id FROM users WHERE username=?)
-              AND date=?
-        """, (new_status, username, date))
-        conn.commit()
-        return redirect("/view_attendance")
+    try:
+        teacher = conn.execute(
+            "SELECT teacher_id FROM teachers WHERE user_id = ?", (session["user_id"],)
+        ).fetchone()
+        if not teacher:
+            return "Teacher record not found", 404
 
-    record = conn.execute("""
-        SELECT a.*, u.username
-        FROM attendance a
-        JOIN users u ON a.student_id = u.user_id
-        WHERE u.username=? AND a.date=?
-    """, (username, date)).fetchone()
+        record = conn.execute("""
+            SELECT a.*, u.username
+            FROM attendance a
+            JOIN users u ON a.student_id = u.user_id
+            JOIN teacher_subjects ts ON ts.subject_id = a.subject_id
+            WHERE u.username = ? AND a.date = ? AND ts.teacher_id = ?
+            ORDER BY a.id DESC
+            LIMIT 1
+        """, (username, date, teacher["teacher_id"])).fetchone()
+        if not record:
+            return "Attendance record not found", 404
 
-    return render_template("edit_attendance.html", record=record)
+        if request.method == "POST":
+            new_status = request.form.get("status")
+            if new_status not in {"Present", "Absent", "Approved Leave", "Leave", "Denied Leave"}:
+                flash("Invalid attendance status.", "error")
+                return redirect(request.url)
+            conn.execute("UPDATE attendance SET status = ? WHERE id = ?", (new_status, record["id"]))
+            conn.commit()
+            return redirect(url_for("view_combined_attendance"))
+
+        return render_template("edit_attendance.html", record=record)
+    finally:
+        conn.close()
+
+@app.route("/assign_subject", methods=["GET", "POST"])
+def assign_subject():
+    if session.get("role") != "admin":
+        return redirect("/")
+
+    conn = get_db()
+    try:
+        if request.method == "POST":
+            teacher_id = request.form.get("teacher_id", type=int)
+            subject_ids = request.form.getlist("subject_ids")
+            if not teacher_id:
+                flash("Please select a teacher.", "error")
+                return redirect(url_for("assign_subject"))
+            teacher = conn.execute("SELECT teacher_id FROM teachers WHERE teacher_id = ?", (teacher_id,)).fetchone()
+            if not teacher:
+                flash("Teacher not found.", "error")
+                return redirect(url_for("assign_subject"))
+            valid_subject_ids = {
+                row["subject_id"] for row in conn.execute(
+                    "SELECT subject_id FROM subjects WHERE subject_id IN (%s)" % ",".join("?" * len(subject_ids)),
+                    tuple(int(s) for s in subject_ids)
+                ).fetchall()
+            } if subject_ids else set()
+            conn.execute("DELETE FROM teacher_subjects WHERE teacher_id = ?", (teacher_id,))
+            for subject_id in valid_subject_ids:
+                conn.execute(
+                    "INSERT OR IGNORE INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)",
+                    (teacher_id, subject_id),
+                )
+            conn.commit()
+            flash("Subject assignments updated successfully.", "success")
+            return redirect(url_for("assign_subject"))
+        teachers = conn.execute("SELECT teacher_id, name FROM teachers ORDER BY name").fetchall()
+        subjects = conn.execute("SELECT subject_id, name FROM subjects ORDER BY name").fetchall()
+        teacher_subjects = {}
+        for row in conn.execute("SELECT teacher_id, subject_id FROM teacher_subjects"):
+            teacher_subjects.setdefault(row["teacher_id"], []).append(row["subject_id"])
+        return render_template("assign_subject.html", teachers=teachers, subjects=subjects, teacher_subjects=teacher_subjects)
+    finally:
+        conn.close()
+
+@app.route("/view_teacher_subjects")
+def view_teacher_subjects():
+    if session.get("role") != "admin":
+        return redirect("/")
+    conn = get_db()
+    try:
+        assignments = conn.execute("""
+            SELECT t.name AS teacher_name, s.name AS subject_name
+            FROM teacher_subjects ts
+            JOIN teachers t ON t.teacher_id = ts.teacher_id
+            JOIN subjects s ON s.subject_id = ts.subject_id
+            ORDER BY t.name, s.name
+        """).fetchall()
+        return render_template("view_teacher_subjects.html", assignments=assignments)
+    finally:
+        conn.close()
 
 @app.route("/add_subject", methods=["GET", "POST"])
 def add_subject():
@@ -1473,70 +1495,50 @@ def add_subject():
 
 @app.route("/handle_leave_request", methods=["POST"])
 def handle_leave_request():
-    if 'role' not in session or session['role'] != 'teacher':
+    if session.get("role") != "teacher":
         return redirect("/")
-
-    request_id = request.form.get('request_id')
-    action = (request.form.get('action') or '').strip().lower()
-
-    if not request_id or not action:
-        flash('Invalid request', 'error')
-        return redirect(url_for('view_leave_requests'))
-
+    request_id = request.form.get("request_id", type=int)
+    action = (request.form.get("action") or "").strip().lower()
+    if not request_id or action not in {"approve", "deny"}:
+        flash("Invalid leave request action.", "error")
+        return redirect(url_for("view_leave_requests"))
     conn = get_db()
     try:
-        status = 'Approved' if action == 'approve' else 'Denied'
-
+        teacher = conn.execute("SELECT teacher_id FROM teachers WHERE user_id = ?", (session["user_id"],)).fetchone()
+        if not teacher:
+            flash("Teacher record not found.", "error")
+            return redirect(url_for("dashboard"))
         leave_request = conn.execute("""
-            SELECT lr.student_id, lr.date, lr.teacher_id
-            FROM leave_requests lr
-            WHERE lr.id = ?
-        """, (request_id,)).fetchone()
-
+            SELECT student_id, date, teacher_id FROM leave_requests WHERE id = ? AND teacher_id = ?
+        """, (request_id, teacher["teacher_id"])).fetchone()
         if not leave_request:
-            flash('Leave request not found', 'error')
-            return redirect(url_for('view_leave_requests'))
-
-        teacher_subjects = conn.execute("""
-            SELECT subject_id
-            FROM teacher_subjects
-            WHERE teacher_id = ?
-        """, (leave_request['teacher_id'],)).fetchall()
-
-        conn.execute(
-            "UPDATE leave_requests SET status = ? WHERE id = ?",
-            (status, request_id)
-        )
-
-        if status == 'Approved':
-            for subject in teacher_subjects:
+            flash("Leave request not found or not assigned to you.", "error")
+            return redirect(url_for("view_leave_requests"))
+        status = "Approved" if action == "approve" else "Denied"
+        conn.execute("UPDATE leave_requests SET status = ? WHERE id = ?", (status, request_id))
+        if status == "Approved":
+            subjects = conn.execute("SELECT subject_id FROM teacher_subjects WHERE teacher_id = ?", (teacher["teacher_id"],)).fetchall()
+            for subject in subjects:
                 attendance = conn.execute("""
-                    SELECT id
-                    FROM attendance
-                    WHERE student_id = ? AND date = ? AND subject_id = ?
-                """, (leave_request['student_id'], leave_request['date'], subject['subject_id'])).fetchone()
-
+                    SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id = ?
+                """, (leave_request["student_id"], leave_request["date"], subject["subject_id"])).fetchone()
                 if attendance:
-                    conn.execute("""
-                        UPDATE attendance
-                        SET status = 'Approved Leave'
-                        WHERE student_id = ? AND date = ? AND subject_id = ?
-                    """, (leave_request['student_id'], leave_request['date'], subject['subject_id']))
+                    conn.execute("UPDATE attendance SET status = 'Approved Leave' WHERE id = ?", (attendance["id"],))
                 else:
                     conn.execute("""
-                        INSERT INTO attendance (student_id, date, status, subject_id)
-                        VALUES (?, ?, 'Approved Leave', ?)
-                    """, (leave_request['student_id'], leave_request['date'], subject['subject_id']))
-
+                        INSERT INTO attendance (student_id, date, status, subject_id) VALUES (?, ?, 'Approved Leave', ?)
+                    """, (leave_request["student_id"], leave_request["date"], subject["subject_id"]))
         conn.commit()
-        flash(f'Leave request {status.lower()} successfully', 'success')
-    except Exception as e:
+        flash(f"Leave request {status.lower()} successfully.", "success")
+    except Exception as exc:
         conn.rollback()
-        flash(f'Error processing request: {str(e)}', 'error')
+        flash(f"Error processing request: {exc}", "error")
     finally:
         conn.close()
-
-    return redirect(url_for('view_leave_requests'))
+    return redirect(url_for("view_leave_requests"))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug = os.getenv("FLASK_DEBUG", "0").lower() in {"1", "true", "yes"}
+    host = os.getenv("FLASK_HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host=host, port=port, debug=debug)

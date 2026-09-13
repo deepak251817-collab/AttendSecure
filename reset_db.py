@@ -1,60 +1,42 @@
+import getpass
 import os
+import secrets
 import sqlite3
+from pathlib import Path
+
 from werkzeug.security import generate_password_hash
 
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = Path(os.getenv("ATTENDANCE_DB_PATH", BASE_DIR / "database" / "attendance.db")).expanduser()
+SCHEMA_PATH = BASE_DIR / "database" / "schemas" / "schema.sql"
+
 def reset_database():
-    # Database path
-    db_path = os.path.join('database', 'attendance.db')
-    schema_path = os.path.join('database', 'schemas', 'schema.sql')
-
-    # Delete existing database if it exists
-    if os.path.exists(db_path):
-        os.remove(db_path)
-        print("Existing database deleted.")
-
-    # Ensure database directory exists
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-
-    # Create new database
-    conn = sqlite3.connect(db_path)
-    
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if DB_PATH.exists():
+        DB_PATH.unlink()
+        print("Existing database removed.")
+    conn = sqlite3.connect(str(DB_PATH))
     try:
-        # Read schema
-        with open(schema_path, 'r') as f:
-            schema = f.read()
-        
-        # Execute schema (this creates tables)
-        conn.executescript(schema)
-        
-        # Create admin user with properly hashed password
-        admin_password = "admin123"
-        hashed_password = generate_password_hash(admin_password)
-        
-        # Delete any existing admin user first
-        conn.execute("DELETE FROM users WHERE username = 'admin'")
-        
-        # Insert new admin user
-        conn.execute("""
-            INSERT INTO users (username, password, role)
-            VALUES (?, ?, 'admin')
-        """, ('admin', hashed_password))
-        
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        admin_password = os.getenv("ADMIN_PASSWORD") or getpass.getpass("Set admin password (leave blank to generate one): ")
+        generated_password = False
+        if not admin_password:
+            admin_password = secrets.token_urlsafe(12)
+            generated_password = True
+        conn.execute("INSERT INTO users (username, password, role) VALUES (?, ?, 'admin')", ("admin", generate_password_hash(admin_password, method="pbkdf2:sha256")))
         conn.commit()
-        
-        print("""Database reset successfully!
-        
-Default admin credentials:
-Username: admin
-Password: admin123
-
-Please change the password after first login.""")
-        
-    except Exception as e:
-        print(f"Error resetting database: {str(e)}")
-        if os.path.exists(db_path):
-            os.remove(db_path)
+        print(f"Database initialized at: {DB_PATH}")
+        print("Admin username: admin")
+        if generated_password:
+            print(f"Generated admin password (save it now): {admin_password}")
+        else:
+            print("Admin password set from your input / ADMIN_PASSWORD.")
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
 if __name__ == "__main__":
-    reset_database() 
+    reset_database()

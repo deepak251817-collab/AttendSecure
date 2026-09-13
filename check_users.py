@@ -1,25 +1,17 @@
-import sqlite3
 import os
+import sqlite3
+from pathlib import Path
 
-def get_db():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    db_dir = os.path.join(BASE_DIR, "database")
-    if not os.path.exists(db_dir):
-        os.makedirs(db_dir)
-    db_path = os.path.join(db_dir, "attendance.db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def check_users():
-    conn = get_db()
-    users = conn.execute("SELECT username, role FROM users").fetchall()
-    print("\nAvailable Users:")
-    print("Username | Role")
-    print("-" * 30)
-    for user in users:
-        print(f"{user['username']} | {user['role']}")
-    conn.close()
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = Path(os.getenv("ATTENDANCE_DB_PATH", BASE_DIR / "database" / "attendance.db")).expanduser()
 
 if __name__ == "__main__":
-    check_users() 
+    if not DB_PATH.exists():
+        raise SystemExit("Database not found. Run: python reset_db.py")
+    conn = sqlite3.connect(str(DB_PATH))
+    rows = conn.execute("SELECT username, role FROM users ORDER BY role, username").fetchall()
+    print("Username | Role")
+    print("-" * 30)
+    for username, role in rows:
+        print(f"{username} | {role}")
+    conn.close()
