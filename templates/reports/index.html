@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Reports &amp; Exports{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Reports &amp; Exports</h2>
+
+{% from "partials.html" import filter_form %}
+{{ filter_form(subjects, pairs, {'section_id': f.get('section_id'), 'subject_id': f.get('subject_id'), 'start_date': f.get('start_date'), 'end_date': f.get('end_date')}) }}
+
+<div class="btn-group mb-3">
+  <a class="btn btn-success" href="{{ url_for('reports.export', file_type='excel', section_id=f.get('section_id') or '', subject_id=f.get('subject_id') or '', start_date=f.get('start_date') or '', end_date=f.get('end_date') or '', status=f.get('status') or '') }}">
+    <i class="fas fa-file-excel me-1"></i> Excel
+  </a>
+  <a class="btn btn-outline-success" href="{{ url_for('reports.export', file_type='csv', section_id=f.get('section_id') or '', subject_id=f.get('subject_id') or '', start_date=f.get('start_date') or '', end_date=f.get('end_date') or '', status=f.get('status') or '') }}">
+    <i class="fas fa-file-csv me-1"></i> CSV
+  </a>
+  <a class="btn btn-danger" href="{{ url_for('reports.export', file_type='pdf', section_id=f.get('section_id') or '', subject_id=f.get('subject_id') or '', start_date=f.get('start_date') or '', end_date=f.get('end_date') or '', status=f.get('status') or '') }}">
+    <i class="fas fa-file-pdf me-1"></i> PDF
+  </a>
+</div>
+
+{% if summary_rows %}
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0">Per-student summary</h5></div>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped mb-0">
+      <thead><tr><th>Student</th><th>Register No.</th><th>Class</th><th>Total</th>
+        <th>Present</th><th>Absent</th><th>Leave</th><th>%</th></tr></thead>
+      <tbody>
+      {% for r in summary_rows %}
+        <tr>
+          <td>{{ r.student_name }}</td>
+          <td>{{ r.register_number or '—' }}</td>
+          <td>{% if r.class_name %}{{ r.class_name }}-{{ r.section_name }}{% else %}—{% endif %}</td>
+          <td>{{ r.total }}</td><td>{{ r.present }}</td><td>{{ r.absent }}</td><td>{{ r.leave }}</td>
+          <td>{{ r.percentage }}%</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if rows %}
+<p class="text-muted small">{{ rows | length }} attendance records (latest first, max 5000)</p>
+<div class="card">
+  <div class="table-responsive" style="max-height: 480px;">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Date</th><th>Period</th><th>Student</th><th>Register No.</th><th>Subject</th><th>Class</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.attendance_date }}</td>
+          <td>{{ r.period }}</td>
+          <td>{{ r.student_name }}</td>
+          <td>{{ r.register_number or '—' }}</td>
+          <td>{{ r.subject_name }}</td>
+          <td>{% if r.class_name %}{{ r.class_name }}-{{ r.section_name }}{% else %}—{% endif %}</td>
+          <td>{% from "macros.html" import status_badge %}{{ status_badge(r.status) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">No records for this selection. Adjust the filters above.</div>
+{% endif %}
+{% endblock %}

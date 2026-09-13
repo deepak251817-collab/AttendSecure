@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Low Attendance{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-exclamation-triangle me-2"></i>Low Attendance Alerts</h2>
+
+<form class="row g-2 align-items-end mb-3" method="get">
+  <div class="col-md-3">
+    <select name="section_id" class="form-select">
+      <option value="">All sections</option>
+      {% for p in pairs %}
+      <option value="{{ p.section_id }}" {{ 'selected' if selected_section == p.section_id }}>{{ p.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="subject_id" class="form-select">
+      <option value="">All subjects</option>
+      {% for s in subjects %}
+      <option value="{{ s.subject_id }}" {{ 'selected' if selected_subject == s.subject_id }}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label small mb-0">Threshold %</label>
+    <input type="number" name="threshold" class="form-control" min="1" max="100"
+           value="{{ threshold | int }}" step="1">
+  </div>
+  <div class="col-md-2 d-grid">
+    <button class="btn btn-primary">Apply</button>
+  </div>
+  <div class="col-md-2 d-grid">
+    <a class="btn btn-outline-success" href="{{ url_for('reports.export_low_attendance', threshold=threshold, section_id=selected_section, subject_id=selected_subject) }}">
+      <i class="fas fa-file-excel me-1"></i> Excel
+    </a>
+  </div>
+</form>
+
+{% if rows %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Student</th><th>Class</th><th>Subject</th><th>Total</th>
+            <th>Attended</th><th>Percentage</th><th>Classes needed to reach {{ threshold | int }}%</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.display_name }}</td>
+          <td>{% if r.class_name %}{{ r.class_name }}-{{ r.section_name }}{% else %}—{% endif %}</td>
+          <td>{{ r.subject_name or '—' }}</td>
+          <td>{{ r.total }}</td>
+          <td>{{ r.attended }}</td>
+          <td><span class="badge bg-danger">{{ r.percentage }}%</span></td>
+          <td>
+            {% if r.classes_needed > 0 %}
+              <strong>{{ r.classes_needed }}</strong> consecutive classes
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-success">No students are below {{ threshold | int }}% for this selection.</div>
+{% endif %}
+{% endblock %}

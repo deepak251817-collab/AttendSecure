@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-calendar-check me-2"></i>My Attendance</h2>
+
+<div class="row g-3 mb-4">
+  {% from "partials.html" import stat_card %}
+  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
+  {{ stat_card('fa-plane', '#f59e0b', 'Leave', overall.leave) }}
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0">Subject-wise summary</h5></div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Subject</th><th>Total</th><th>Present</th><th>Absent</th><th>Leave</th><th>%</th></tr></thead>
+      <tbody>
+      {% for s in by_subject %}
+        <tr>
+          <td>{{ s.subject_name }}</td><td>{{ s.total }}</td><td>{{ s.present }}</td>
+          <td>{{ s.absent }}</td><td>{{ s.leave }}</td><td>{{ s.percentage }}%</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-muted">No data yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-3">
+    <select name="subject_id" class="form-select">
+      <option value="">All subjects</option>
+      {% for s in subjects %}
+      <option value="{{ s.subject_id }}" {{ 'selected' if selected_subject == s.subject_id }}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select">
+      <option value="">Any status</option>
+      {% for st in ['present', 'absent', 'leave'] %}
+      <option value="{{ st }}" {{ 'selected' if selected_status == st }}>{{ st | capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}"></div>
+  <div class="col-md-2"><input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}"></div>
+  <div class="col-md-1 d-grid"><button class="btn btn-outline-primary">Filter</button></div>
+</form>
+
+<p class="text-muted small">{{ total }} records</p>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>Date</th><th>Period</th><th>Subject</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.attendance_date }}</td>
+          <td>{{ r.period }}</td>
+          <td>{{ r.subject_name }}</td>
+          <td>{% from "macros.html" import status_badge %}{{ status_badge(r.status) }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-center text-muted">No records match the filters.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% from "macros.html" import pagination %}
+{{ pagination('student.my_attendance', page, pages, params={'subject_id': selected_subject, 'status': selected_status, 'start_date': start_date, 'end_date': end_date}) }}
+{% endblock %}

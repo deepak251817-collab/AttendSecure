@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-user-graduate me-2"></i>My Dashboard</h2>
+
+<div class="row g-3 mb-4">
+  {% from "partials.html" import stat_card %}
+  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
+  {{ stat_card('fa-plane', '#f59e0b', 'Leave', overall.leave) }}
+  {{ stat_card('fa-book', '#0ea5e9', 'Subjects', by_subject | length) }}
+</div>
+
+{% if warnings %}
+<div class="alert alert-warning">
+  <i class="fas fa-exclamation-triangle me-1"></i>
+  Low attendance warning (below {{ threshold }}%):
+  <ul class="mb-0 mt-1">
+    {% for w in warnings %}
+    <li><strong>{{ w.subject_name }}</strong> — {{ w.percentage }}%</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">Subject-wise attendance</h5>
+        <a href="{{ url_for('student.my_attendance') }}" class="btn btn-sm btn-outline-primary">Details</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Subject</th><th>Total</th><th>Present</th><th>%</th></tr></thead>
+          <tbody>
+          {% for s in by_subject %}
+            <tr>
+              <td>{{ s.subject_name }}</td>
+              <td>{{ s.total }}</td>
+              <td>{{ s.present }}</td>
+              <td style="min-width:140px">
+                {% from "macros.html" import progress_bar %}{{ progress_bar(s.percentage) }}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted">No attendance recorded yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">Recent attendance</h5>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for r in recent %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ r.attendance_date }} · P{{ r.period }} · {{ r.subject_name }}</span>
+          {% from "macros.html" import status_badge %}{{ status_badge(r.status) }}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">Nothing yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">Recent leave requests</h5>
+        <a href="{{ url_for('student.leave_requests') }}" class="btn btn-sm btn-outline-primary">All</a>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for l in leaves %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ l.start_date }} → {{ l.end_date }}</span>
+          {% from "macros.html" import status_badge %}{{ status_badge(l.status) }}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No leave requests.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

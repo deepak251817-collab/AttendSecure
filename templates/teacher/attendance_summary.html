@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Attendance Summary{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Attendance Summary</h2>
+{% from "partials.html" import filter_form %}
+{{ filter_form(subjects, pairs, {'section_id': selected_section, 'subject_id': selected_subject}) }}
+
+{% if rows %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Student</th><th>Register No.</th><th>Total</th><th>Present</th>
+            <th>Absent</th><th>Leave</th><th style="min-width:180px">Percentage</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.display_name }}</td>
+          <td>{{ r.register_number or '—' }}</td>
+          <td>{{ r.total }}</td>
+          <td>{{ r.present }}</td>
+          <td>{{ r.absent }}</td>
+          <td>{{ r.leave }}</td>
+          <td>{% from "macros.html" import progress_bar %}{{ progress_bar(r.percentage or 0) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">Select a section (and optionally a subject) to see per-student summaries.</div>
+{% endif %}
+{% endblock %}

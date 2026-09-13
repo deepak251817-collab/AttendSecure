@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Leave Requests{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-envelope-open-text me-2"></i>Leave Requests</h2>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Student</th><th>Subject</th><th>From</th><th>To</th><th>Reason</th>
+            <th>Status</th><th class="text-end">Decision</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.student_name }}</td>
+          <td>{{ r.subject_name or '—' }}</td>
+          <td>{{ r.start_date }}</td>
+          <td>{{ r.end_date }}</td>
+          <td class="small">{{ r.reason }}</td>
+          <td>{% from "macros.html" import status_badge %}{{ status_badge(r.status) }}</td>
+          <td class="text-end">
+            {% if r.status == 'pending' %}
+            <div class="btn-group btn-group-sm">
+              <form method="POST" action="{{ url_for('teacher.decide_leave', leave_id=r.leave_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="decision" value="approved">
+                <button class="btn btn-success">Approve</button>
+              </form>
+              <form method="POST" action="{{ url_for('teacher.decide_leave', leave_id=r.leave_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="decision" value="rejected">
+                <button class="btn btn-danger">Reject</button>
+              </form>
+            </div>
+            {% else %}
+            <span class="text-muted small">by #{{ r.approved_by }}</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-center text-muted">No leave requests.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

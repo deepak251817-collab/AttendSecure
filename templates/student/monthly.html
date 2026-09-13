@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Monthly Attendance{% endblock %}
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-chart-line me-2"></i>Monthly Trend</h2>
+
+<div class="row g-3 mb-4">
+  {% from "partials.html" import stat_card %}
+  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-calendar-check', '#0ea5e9', 'Total classes', overall.total) }}
+  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <canvas id="trendChart" height="110"></canvas>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Month</th><th>Total</th><th>Attended</th><th>Percentage</th></tr></thead>
+      <tbody>
+      {% for r in trend %}
+        <tr>
+          <td>{{ r.month }}</td><td>{{ r.total }}</td><td>{{ r.attended }}</td>
+          <td>{{ r.percentage }}%</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="text-center text-muted">No data yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  const ctx = document.getElementById('trendChart');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ trend | map(attribute='month') | list | tojson }},
+      datasets: [{
+        label: 'Attendance %',
+        data: {{ trend | map(attribute='percentage') | list | tojson }},
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79,70,229,0.1)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      scales: { y: { min: 0, max: 100 } },
+      plugins: { legend: { display: false } }
+    }
+  });
+</script>
+{% endblock %}

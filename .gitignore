@@ -1,3 +1,9 @@
+# Environments / secrets
+.env
+.env.*
+!.env.example
+.flask_secret_key
+
 # Python
 __pycache__/
 *.py[cod]
@@ -14,25 +20,26 @@ venv/
 env/
 ENV/
 
-# Secrets / local configuration
-.env
-.env.*
-!.env.example
-.flask_secret_key
-*.pem
-*.key
-*.crt
-secrets/
-
-# Runtime data
+# MySQL / database artifacts
+*.sql.gz
+*.dump
+*.bak
 *.db
 *.sqlite
 *.sqlite3
-instance/
-uploads/*
-!uploads/.gitkeep
+# Keep the canonical schema in Git
+!database/schemas/schema.sql
+docker/mysql/data/
+docker/mysql/test-data/
+
+# Logs
 logs/
 *.log
+
+# Uploads (keep the folder, ignore content)
+uploads/*
+!uploads/.gitkeep
+!uploads/sample_users.csv.example
 
 # IDE / OS
 .vscode/
@@ -44,8 +51,3 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
-
-# Local migration / export files
-*.sql.gz
-*.bak
-*.zip

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Manage Users{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0"><i class="fas fa-users me-2"></i>Users</h2>
+  <div class="btn-group">
+    <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary"><i class="fas fa-user-plus me-1"></i> Add</a>
+    <a href="{{ url_for('admin.import_users') }}" class="btn btn-outline-primary"><i class="fas fa-file-import me-1"></i> Import</a>
+  </div>
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-4">
+    <input type="text" name="search" class="form-control" placeholder="Search username / name / register no."
+           value="{{ search }}">
+  </div>
+  <div class="col-md-3">
+    <select name="role" class="form-select">
+      <option value="">All roles</option>
+      {% for r in ['admin', 'teacher', 'student'] %}
+      <option value="{{ r }}" {{ 'selected' if role == r }}>{{ r | capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="submit">Filter</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>Username</th><th>Name</th><th>Role</th><th>Register No.</th><th>Class</th><th>Section</th><th class="text-end">Actions</th></tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ u.full_name or '—' }}</td>
+          <td><span class="badge bg-secondary">{{ u.role }}</span></td>
+          <td>{{ u.register_number or '—' }}</td>
+          <td>{{ u.class_name or '—' }}</td>
+          <td>{{ u.section_name or '—' }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.edit_user', user_id=u.user_id) }}"><i class="fas fa-pen"></i></a>
+            <a class="btn btn-sm btn-outline-warning" href="{{ url_for('admin.reset_password', user_id=u.user_id) }}"><i class="fas fa-key"></i></a>
+            <form class="d-inline" method="POST" action="{{ url_for('admin.delete_user', user_id=u.user_id) }}"
+                  onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="text-center text-muted">No users found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% from "macros.html" import pagination %}
+{{ pagination('admin.users', page, pages, params={'search': search, 'role': role}) }}
+{% endblock %}

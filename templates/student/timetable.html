@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}My Timetable{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-calendar-week me-2"></i>My Timetable</h2>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table timetable mb-0">
+      <thead><tr><th>Day</th><th>Period</th><th>Time</th><th>Subject</th><th>Teacher</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ days.get(r.day_of_week, r.day_of_week) }}</td>
+          <td>{{ r.period }}</td>
+          <td>{{ r.start_time }}–{{ r.end_time }}</td>
+          <td>{{ r.subject_name }}</td>
+          <td>{{ r.teacher_name }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="text-center text-muted">
+          No timetable published for your section yet.
+        </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

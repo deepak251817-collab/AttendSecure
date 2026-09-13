@@ -1,142 +1,144 @@
-@startuml Enhanced_Attendance_Management_System_ERD
-
-' Styling and Theme
-!theme plain
+@startuml Attendance_Management_System_ERD
 skinparam backgroundColor white
 skinparam linetype ortho
-skinparam packageStyle rectangle
-
-' Custom styling
 skinparam class {
     BackgroundColor #F8F9FA
     ArrowColor #2C3E50
     BorderColor #2C3E50
     BorderThickness 2
-    FontSize 14
-    AttributeFontSize 12
 }
 
-' Color definitions
-!$primary = "#3498DB"
-!$secondary = "#2ECC71"
-!$warning = "#F1C40F"
-!$danger = "#E74C3C"
-
-' Entity definitions with custom colors
-package "Authentication" {
-    class Users #aliceblue {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        --
-        username: VARCHAR(50)
+package "Identity" {
+    class users {
+        PK user_id: INT UNSIGNED
+        username: VARCHAR(50) UNIQUE
+        email: VARCHAR(120)
         password_hash: VARCHAR(255)
-        role: ENUM
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
-        ..
-        <i>Roles: admin, teacher, student</i>
+        full_name: VARCHAR(120)
+        role: ENUM(admin, teacher, student)
+        is_active: TINYINT(1)
+    }
+    class teachers {
+        PK teacher_id: INT UNSIGNED
+        FK user_id -> users
+        department: VARCHAR(80)
+    }
+    class students {
+        PK student_id: INT UNSIGNED
+        FK user_id -> users
+        register_number: VARCHAR(40) UNIQUE
+        FK class_id -> classes
+        FK section_id -> sections
     }
 }
 
-package "Core Entities" {
-    class Teachers #e8f8f5 {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        <color:#3498DB>FK user_id: INT</color>
-        --
-        name: VARCHAR(100)
-        email: VARCHAR(100)
-        phone: VARCHAR(20)
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
+package "Academic structure" {
+    class classes {
+        PK class_id: INT UNSIGNED
+        name: VARCHAR(50) UNIQUE
     }
-
-    class Students #e8f8f5 {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        <color:#3498DB>FK user_id: INT</color>
-        --
-        name: VARCHAR(100)
-        roll_number: VARCHAR(20)
-        class_info: VARCHAR(50)
-        email: VARCHAR(100)
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
+    class sections {
+        PK section_id: INT UNSIGNED
+        FK class_id -> classes
+        name: VARCHAR(20)
+        UNIQUE (class_id, name)
     }
-
-    class Subjects #e8f8f5 {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        --
-        name: VARCHAR(100)
-        code: VARCHAR(20)
-        description: TEXT
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
+    class subjects {
+        PK subject_id: INT UNSIGNED
+        code: VARCHAR(20) UNIQUE
+        name: VARCHAR(100) UNIQUE
+    }
+    class teacher_subjects {
+        PK id
+        FK teacher_id -> teachers
+        FK subject_id -> subjects
+        UNIQUE (teacher_id, subject_id)
+    }
+    class timetable {
+        PK timetable_id: INT UNSIGNED
+        FK class_id / section_id / subject_id / teacher_id
+        day_of_week: TINYINT (1-7)
+        period: TINYINT (1-12)
+        start_time / end_time: TIME
+        UNIQUE (class_id, section_id, day_of_week, period)
     }
 }
 
-package "Relationships" {
-    class TeacherSubjects #fff5e6 {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        <color:#3498DB>FK teacher_id: INT</color>
-        <color:#3498DB>FK subject_id: INT</color>
-        --
-        created_at: TIMESTAMP
+package "Attendance" {
+    class attendance {
+        PK attendance_id: INT UNSIGNED
+        FK student_id -> students
+        FK subject_id -> subjects
+        FK teacher_id -> teachers
+        FK class_id -> classes
+        attendance_date: DATE
+        period: TINYINT
+        status: ENUM(present, absent, leave)
+        FK marked_by -> users
+        UNIQUE (student_id, subject_id, attendance_date, period)
+    }
+    class attendance_edits {
+        PK edit_id
+        FK attendance_id -> attendance
+        old_status / new_status: ENUM
+        FK changed_by -> users
+        reason: VARCHAR(255)
+    }
+    class attendance_sessions {
+        PK session_id
+        token_hash: CHAR(64) UNIQUE
+        FK teacher_id / subject_id / class_id / section_id
+        attendance_date: DATE
+        period: TINYINT
+        expires_at: DATETIME
+        is_active: TINYINT(1)
     }
 }
 
-package "Tracking" {
-    class Attendance #f9ebea {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        <color:#3498DB>FK student_id: INT</color>
-        <color:#3498DB>FK subject_id: INT</color>
-        --
-        date: DATE
-        status: ENUM
-        marked_by: INT
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
-        ..
-        <i>Status: present, absent, late</i>
-    }
-
-    class LeaveRequests #f9ebea {
-        <b><color:#E74C3C>PK id: INT</color></b>
-        <color:#3498DB>FK student_id: INT</color>
-        --
-        start_date: DATE
-        end_date: DATE
+package "Workflow" {
+    class leave_requests {
+        PK leave_id: INT UNSIGNED
+        FK student_id -> students
+        FK teacher_id -> teachers
+        FK subject_id -> subjects
+        start_date / end_date: DATE
         reason: TEXT
-        status: ENUM
-        approved_by: INT
-        created_at: TIMESTAMP
-        updated_at: TIMESTAMP
-        ..
-        <i>Status: pending, approved, rejected</i>
+        status: ENUM(pending, approved, rejected)
+        FK approved_by -> teachers
+    }
+    class notifications {
+        PK notification_id
+        FK user_id -> users
+        title: VARCHAR(150)
+        message: TEXT
+        type: ENUM
+        is_read: TINYINT(1)
+    }
+    class audit_logs {
+        PK audit_id
+        FK user_id -> users
+        action: VARCHAR(64)
+        entity_type / entity_id
+        description: TEXT
+        ip_address: VARCHAR(45)
     }
 }
 
-' Relationships with labels
-Users "1" -- "0..1" Teachers : has >
-Users "1" -- "0..1" Students : has >
-Teachers "1" -- "*" TeacherSubjects : teaches >
-Subjects "1" -- "*" TeacherSubjects : assigned to >
-Students "1" -- "*" Attendance : has >
-Subjects "1" -- "*" Attendance : tracked for >
-Students "1" -- "*" LeaveRequests : submits >
-Users "1" -- "*" LeaveRequests : approves >
-
-' Notes
-note right of Users
-  Central authentication system
-  Handles all user types
-end note
-
-note right of TeacherSubjects
-  Junction table for
-  many-to-many relationship
-end note
-
-note bottom of Attendance
-  Daily attendance tracking
-  with status management
-end note
-
-@enduml 
+users ||--o| teachers : "1:1"
+users ||--o| students : "1:1"
+classes ||--o{ sections : has
+students }o--|| classes : belongs
+students }o--|| sections : placed
+teachers ||--o{ teacher_subjects : assigned
+subjects ||--o{ teacher_subjects : taught
+teachers ||--o{ timetable : teaches
+sections ||--o{ timetable : scheduled
+students ||--o{ attendance : has
+subjects ||--o{ attendance : in
+attendance ||--o{ attendance_edits : history
+teachers ||--o{ attendance_sessions : starts
+students ||--o{ leave_requests : requests
+teachers ||--o{ leave_requests : reviews
+users ||--o{ notifications : receives
+users ||--o{ audit_logs : acts
+@enduml

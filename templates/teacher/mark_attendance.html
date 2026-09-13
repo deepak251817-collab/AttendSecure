@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Mark Attendance{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-clipboard-check me-2"></i>Mark Attendance</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('teacher.mark_attendance') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small mb-0">Section</label>
+          <select name="section_id" class="form-select" required>
+            <option value="">Choose section…</option>
+            {% for p in pairs %}
+            <option value="{{ p.section_id }}" {{ 'selected' if selected_section == p.section_id }}>{{ p.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small mb-0">Subject</label>
+          <select name="subject_id" class="form-select" required>
+            <option value="">Choose subject…</option>
+            {% for s in subjects %}
+            <option value="{{ s.subject_id }}" {{ 'selected' if selected_subject == s.subject_id }}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-0">Date</label>
+          <input type="date" name="attendance_date" class="form-control" value="{{ selected_date }}" required>
+        </div>
+        <div class="col-md-1">
+          <label class="form-label small mb-0">Period</label>
+          <input type="number" name="period" class="form-control" min="1" max="12" value="{{ selected_period or 1 }}">
+        </div>
+        <div class="col-md-1 d-grid">
+          <button class="btn btn-primary">Load</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if students %}
+<div class="card">
+  <div class="card-header">
+    <strong>Roster — {{ selected_label.label if selected_label else '' }}</strong>
+    <span class="text-muted">on {{ selected_date }}, period {{ selected_period }}</span>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('teacher.submit_attendance') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="section_id" value="{{ selected_section }}">
+      <input type="hidden" name="subject_id" value="{{ selected_subject }}">
+      <input type="hidden" name="attendance_date" value="{{ selected_date }}">
+      <input type="hidden" name="period" value="{{ selected_period }}">
+      {% if selected_label %}
+      <input type="hidden" name="class_id" value="{{ selected_label.class_id }}">
+      {% endif %}
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr><th>Student</th><th>Register No.</th>
+              <th class="text-center">Present</th>
+              <th class="text-center">Absent</th>
+              <th class="text-center">Leave</th>
+              <th class="text-center">Mark all present</th></tr>
+          </thead>
+          <tbody>
+          {% for s in students %}
+            <tr>
+              <td>{{ s.full_name or s.username }}</td>
+              <td>{{ s.register_number or '—' }}</td>
+              {% set st = s.marked_status or 'present' %}
+              <td class="text-center"><input type="radio" name="status_{{ s.student_id }}" value="present" {{ 'checked' if st == 'present' }}></td>
+              <td class="text-center"><input type="radio" name="status_{{ s.student_id }}" value="absent" {{ 'checked' if st == 'absent' }}></td>
+              <td class="text-center"><input type="radio" name="status_{{ s.student_id }}" value="leave" {{ 'checked' if st == 'leave' }}></td>
+              <td class="text-center">
+                {% if loop.first %}
+                <button type="button" class="btn btn-sm btn-outline-success" id="allPresent">Select all present</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Save attendance</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-info">Choose a section, subject and date, then press <strong>Load</strong> to display the roster.</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+  const allBtn = document.getElementById('allPresent');
+  if (allBtn) {
+    allBtn.addEventListener('click', () => {
+      document.querySelectorAll('input[type=radio][value=present]').forEach(r => r.checked = true);
+    });
+  }
+</script>
+{% endblock %}

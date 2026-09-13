@@ -1,89 +1,114 @@
-import sqlite3
-import os
+"""MySQL schema initialization and reset utilities.
+
+Used by reset_db.py and the test suite. Talks to the server (no default
+database selected) so it can create the schema database when needed.
+"""
+from __future__ import annotations
+
+import logging
+import time
 from pathlib import Path
 
-class DatabaseManager:
-    def __init__(self, db_path='database/attendance.db'):
-        self.db_path = db_path
-        self._ensure_db_directory()
-        self.conn = None
-        self.cursor = None
+import mysql.connector
+from mysql.connector import Error as MySQLError
 
-    def _ensure_db_directory(self):
-        """Ensure the database directory exists"""
-        db_dir = os.path.dirname(self.db_path)
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
+logger = logging.getLogger("db")
 
-    def connect(self):
-        """Connect to the database"""
-        self.conn = sqlite3.connect(self.db_path)
-        self.conn.row_factory = sqlite3.Row
-        self.cursor = self.conn.cursor()
-        return self.conn
+SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "schema.sql"
 
-    def close(self):
-        """Close the database connection"""
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-            self.cursor = None
 
-    def execute_script(self, script_path):
-        """Execute an SQL script file"""
-        with open(script_path, 'r') as f:
-            script = f.read()
-        self.cursor.executescript(script)
-        self.conn.commit()
+def ensure_database(cfg, database: str | None = None) -> None:
+    """Create the target database if it does not exist yet."""
+    database = database or cfg.MYSQL_DATABASE
+    cnx = server_connect(cfg)
+    try:
+        cur = cnx.cursor()
+        cur.execute(
+            f"CREATE DATABASE IF NOT EXISTS `{database}` "
+            "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        )
+        cur.close()
+    finally:
+        cnx.close()
 
-    def initialize_database(self):
-        """Initialize or update the database schema"""
-        try:
-            self.connect()
-            schema_path = Path('database/schemas/schema.sql')
-            
-            if not schema_path.exists():
-                raise FileNotFoundError(f"Schema file not found at {schema_path}")
-            
-            print("Applying database schema...")
-            self.execute_script(schema_path)
-            print("Database schema applied successfully!")
 
-        except Exception as e:
-            print(f"Error initializing database: {str(e)}")
-            if self.conn:
-                self.conn.rollback()
+def ensure_schema(cfg, database: str | None = None) -> None:
+    """Apply database/schemas/schema.sql to the target database (idempotent)."""
+    database = database or cfg.MYSQL_DATABASE
+    ensure_database(cfg, database)
+    sql = SCHEMA_PATH.read_text(encoding="utf-8")
+    # Strip comment lines so semicolons inside comments cannot break splits.
+    sql = "\n".join(
+        line for line in sql.splitlines()
+        if not line.strip().startswith("--")
+    )
+    cnx = server_connect(cfg, database)
+    try:
+        cur = cnx.cursor()
+        for statement in filter(None, (s.strip() for s in sql.split(";"))):
+            cur.execute(statement)
+        cur.close()
+        logger.info("Schema ensured on %s", database)
+    finally:
+        cnx.close()
+
+
+def reset_database(cfg, database: str | None = None) -> None:
+    """Drop and recreate every table in the database from the canonical schema.
+
+    Works for database-scoped users (e.g. ``attendance_user`` in Docker) who
+    cannot drop the database itself, by dropping tables with foreign key
+    checks disabled instead.
+    """
+    database = database or cfg.MYSQL_DATABASE
+    try:
+        cnx = server_connect(cfg, database)
+    except MySQLError as exc:
+        if exc.errno == 1049:  # ER_BAD_DB_ERROR: unknown database
+            ensure_database(cfg, database)
+            cnx = server_connect(cfg, database)
+        else:
             raise
-        finally:
-            self.close()
-
-    def reset_database(self):
-        """Reset the database by dropping all tables and reapplying schema"""
+    try:
+        cur = cnx.cursor()
         try:
-            self.connect()
-            
-            # Get all tables
-            self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = [row['name'] for row in self.cursor.fetchall()]
-
-            # Drop all tables
+            cur.execute("SET FOREIGN_KEY_CHECKS = 0")
+            cur.execute("SHOW TABLES")
+            tables = [row[0] for row in cur.fetchall()]
             for table in tables:
-                self.cursor.execute(f"DROP TABLE IF EXISTS {table}")
-            self.conn.commit()
-
-            print("Database reset complete!")
-            
-            # Reapply schema
-            self.initialize_database()
-
-        except Exception as e:
-            print(f"Error resetting database: {str(e)}")
-            if self.conn:
-                self.conn.rollback()
-            raise
+                cur.execute(f"DROP TABLE IF EXISTS `{table}`")
+            cur.execute("SET FOREIGN_KEY_CHECKS = 1")
         finally:
-            self.close()
+            cur.close()
+    finally:
+        cnx.close()
+    ensure_schema(cfg, database)
 
-if __name__ == "__main__":
-    db_manager = DatabaseManager()
-    db_manager.initialize_database() 
+
+def wait_for_server(cfg, timeout: int = 60, interval: float = 2.0) -> bool:
+    """Block until MySQL accepts connections (used by Docker entrypoint)."""
+    deadline = time.time() + timeout
+    last_err = None
+    while time.time() < deadline:
+        try:
+            cnx = server_connect(cfg)
+            cnx.close()
+            return True
+        except MySQLError as exc:
+            last_err = exc
+            time.sleep(interval)
+    logger.error("MySQL not reachable after %ss: %s", timeout, last_err)
+    return False
+
+
+def server_connect(cfg, database: str | None = None) -> mysql.connector.MySQLConnection:
+    return mysql.connector.connect(
+        host=cfg.MYSQL_HOST,
+        port=cfg.MYSQL_PORT,
+        user=cfg.MYSQL_USER,
+        password=cfg.MYSQL_PASSWORD,
+        database=database,
+        connection_timeout=getattr(cfg, "MYSQL_CONNECTION_TIMEOUT", 10),
+        autocommit=True,
+        charset="utf8mb4",
+    )

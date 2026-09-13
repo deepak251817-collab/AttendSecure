@@ -1,6 +1,6 @@
 # Attendance Management System
 
-A role-based web application for managing student attendance, teacher-subject assignments, leave requests, reports, and attendance analytics.
+A role-based college attendance management system built with **Flask 3 + MySQL 8**, featuring attendance tracking, leave workflows, QR-code check-in, analytics dashboards, timetable management, audit logging and Excel/CSV/PDF report exports.
 
 ## Team
 
@@ -9,311 +9,243 @@ A role-based web application for managing student attendance, teacher-subject as
 | Deepak R | Developer |
 | Yashaswini M | Developer |
 
-## What the project does
+## Project Overview
 
-The system supports three roles:
+The system serves three roles:
 
-- **Admin:** manage users, teachers, subjects, assignments, passwords, and bulk imports.
-- **Teacher:** mark attendance, edit attendance, review attendance summaries, identify low-attendance students, process leave requests, and export reports.
-- **Student:** view personal attendance, monthly summaries, attendance percentage, and submit leave requests.
+- **Admin** — manages users (single or bulk import), classes, sections, subjects, teacher-subject assignments, the timetable, reports and the audit log.
+- **Teacher** — views assigned subjects/classes, marks and edits attendance (with a full edit history), runs time-limited QR attendance sessions, reviews leave requests for relevant classes and exports reports.
+- **Student** — views overall and subject-wise attendance, monthly trends and timetable, submits leave requests and tracks their status, checks in via QR and manages their profile/password.
 
-## Key Features
+## Features
 
-### Authentication and security
-- Password hashing with Werkzeug PBKDF2-SHA256.
-- Session-based role access control.
-- Stable application secret generated locally and stored in the ignored `.flask_secret_key` file, or supplied through `FLASK_SECRET_KEY`.
-- HTTP-only and SameSite session cookies.
-- Upload size limit and restricted CSV/Excel upload extensions.
-- SQLite foreign-key enforcement.
-- Sensitive/runtime files excluded from Git.
+### Phase 1 — Core
+- Full MySQL 8 backend (InnoDB, utf8mb4) — no SQLite anywhere.
+- Session authentication with hashed passwords (PBKDF2-SHA256 via Werkzeug).
+- Role-based access control with reusable `@login_required` / `@role_required` decorators.
+- Attendance marking per class/section/subject/date/period with statuses `present` / `absent` / `leave`.
+- Duplicate prevention by a database-level unique constraint on `(student, subject, date, period)`.
+- Leave workflow: student submits → relevant teacher approves/rejects → student sees the result.
+- CSRF protection on every state-changing request; HttpOnly + SameSite session cookies.
+- Login rate limiting (configurable attempts + lockout window).
 
-### Attendance management
-- Mark attendance by class, section, subject, date, and time.
-- Present, Absent, and Approved Leave states.
-- Prevent duplicate attendance for the same student, subject, and date.
-- Teacher attendance history and editing.
-- Student attendance by subject and overall percentage.
-- Monthly attendance summaries.
-- Low-attendance monitoring.
+### Phase 2 — Analytics, Timetable, Reports
+- Admin / Teacher / Student dashboards with live counters.
+- Daily, weekly and monthly attendance analytics with Chart.js trend charts.
+- Low-attendance detection with a configurable threshold (default 75%) **and** a “classes needed to reach the threshold” calculation.
+- Timetable management with backend conflict validation (double-booked teacher, clashing class slot).
+- Report exports to **Excel** (openpyxl), **CSV** and **PDF** (ReportLab) with title, filters and summary.
+- Server-side search, filtering, sorting and pagination on users, attendance history and audit logs.
 
-### Leave management
-- Student leave request submission.
-- Teacher-specific leave request visibility.
-- Approve/deny workflow.
-- Approved leave automatically updates attendance for the teacher's assigned subjects.
+### Phase 3 — QR, Notifications, Audit
+- QR attendance sessions: the teacher generates a signed, expiring token; only its SHA-256 hash is stored server-side.
+- Scans validate on the server: token signature, expiry, session active, student’s section match and duplicate check (DB constraint).
+- In-app notifications with unread badge, mark-read and mark-all-read.
+- Audit logging of logins, user changes, attendance edits, leave decisions and more — filterable by user/action/date/entity.
+- Dedicated `attendance_edits` history (old status, new status, who, when, reason).
 
-### Administration
-- User creation, editing, deletion, and password reset.
-- Subject management.
-- Teacher-subject assignment management.
-- CSV/XLS/XLSX bulk user import.
-- CSV/Excel attendance export.
-
-### Project quality improvements
-- Health endpoint at `/health` for quick service checks.
-- Smoke tests in `tests/test_smoke.py`.
-- Environment-based configuration through `.env.example` / shell variables.
-- Clean source-only repository structure without `.git`, `.venv`, database dumps, or generated cache files.
+### Phase 4 — Operations
+- 68-test pytest suite against a dedicated `attendance_test` database.
+- Docker + Docker Compose with health checks and a wait-for-MySQL entrypoint.
+- Structured logging to console and rotating file (`logs/attendance.log`).
+- Custom error pages for 400/401/403/404/405/429/500 — no stack traces to end users.
 
 ## Technology Stack
 
-- **Backend:** Python 3.11+, Flask
-- **Frontend:** HTML, Jinja2, Bootstrap/CDN assets already used by the templates
-- **Database:** SQLite
-- **Data processing:** pandas, openpyxl
-- **Authentication:** Werkzeug password hashing and Flask sessions
-- **Optional migration:** MySQL via `mysql-connector-python`
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.11+, Flask 3.x |
+| Database | MySQL 8.x (mysql-connector-python) |
+| Frontend | Jinja2, HTML5, CSS3, Bootstrap 5, vanilla JavaScript |
+| Charts | Chart.js 4 |
+| Exports | pandas + openpyxl (Excel), ReportLab (PDF) |
+| QR | qrcode + Pillow |
+| Config | python-dotenv |
+| Tests | pytest |
+| Deployment | Docker, Docker Compose, gunicorn |
+
+## System Architecture
+
+```text
+Browser (Bootstrap 5 UI, Chart.js)
+   ↓  HTTP
+Flask app  (app.py — factory, error handlers, logging, security hooks)
+   ↓
+Routes layer  (routes/ — auth, admin, teacher, student, reports, notifications)
+   ↓
+Service layer (services/ — business rules, authorization, validation)
+   ↓
+Database layer (database/db.py — pooled, parameterized queries)
+   ↓
+MySQL 8  (InnoDB, utf8mb4, FKs + unique constraints)
+```
+
+## Database Architecture
+
+`database/schemas/schema.sql` defines (all InnoDB / utf8mb4, with FKs, unique keys and indexes):
+
+| Table | Purpose |
+|---|---|
+| `users` | Login accounts for all roles (hashed passwords) |
+| `students` / `teachers` | Profile rows linked 1:1 to users |
+| `classes` / `sections` | Academic structure (section belongs to a class) |
+| `subjects` | Subjects with optional code |
+| `teacher_subjects` | Which teacher teaches which subject (unique pair) |
+| `timetable` | Class/section schedule with day, period, times + conflict-preventing unique key |
+| `attendance` | One row per student+subject+date+period (`UNIQUE` — the dedupe guarantee) |
+| `attendance_edits` | History of attendance status changes |
+| `leave_requests` | Student leave workflow (pending/approved/rejected) |
+| `attendance_sessions` | QR sessions (token **hash** only, expiry, active flag) |
+| `notifications` | In-app user notifications |
+| `audit_logs` | Who did what, when, from where |
+| `settings` | Key/value application settings |
+
+Relationships: `students.class_id → classes`, `students.section_id → sections`, `attendance.student_id → students`, `attendance.subject_id → subjects`, `leave_requests.student_id/teacher_id → students/teachers`, plus cascading deletes from `users`.
+
+## User Roles
+
+| Role | Can |
+|---|---|
+| Admin | Users CRUD + bulk import, classes/sections/subjects, teacher-subject assignments, timetable, all reports, audit logs |
+| Teacher | Mark/edit attendance (own subjects only), QR sessions, attendance summaries, low-attendance alerts, leave decisions for relevant classes, own timetable, authorized reports |
+| Student | Personal dashboards and attendance history, leave requests, QR check-in, timetable, profile + password change |
+
+## Installation
+
+### 1. Python setup
+
+```bash
+git clone <your-repository-url>
+cd Attendance_System-Project
+python -m venv .venv
+# Windows:  .venv\Scripts\activate     Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. MySQL setup
+
+Install MySQL 8 locally **or** use the bundled Docker service (step 6). The application needs a database user with create/read/write rights.
+
+### 3. Environment configuration
+
+```bash
+cp .env.example .env    # then edit .env with your values
+```
+
+### 4. Database initialization
+
+```bash
+python reset_db.py           # creates schema if missing, prompts for admin password
+python reset_db.py --reset   # drops and recreates everything (destructive!)
+python seed_demo.py          # optional demo data for presentations
+python check_users.py        # list accounts (diagnostics)
+```
+
+`reset_db.py` reads `ADMIN_PASSWORD` from the environment for unattended setups or prompts securely otherwise. The admin password is never stored in Git.
+
+### 5. Run
+
+```bash
+python app.py
+# open http://127.0.0.1:5000
+```
+
+Health check: `http://127.0.0.1:5000/health`
+
+## MySQL Configuration
+
+All connection values come from environment variables (see `.env.example`):
+
+```env
+FLASK_SECRET_KEY=replace-with-a-secure-secret
+FLASK_DEBUG=0
+FLASK_HOST=127.0.0.1
+FLASK_PORT=5000
+
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=attendance
+MYSQL_USER=root
+MYSQL_PASSWORD=
+```
+
+Never commit `.env`. `APP_ENV` selects `development` / `testing` / `production` configuration (default: development). Tests always use `TEST_MYSQL_DATABASE` (default `attendance_test`).
+
+## Test Instructions
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
+
+The suite (68 tests) resets and uses the dedicated `attendance_test` database — it never touches your dev data. MySQL must be reachable (start the Docker service first, or point `TEST_MYSQL_DATABASE` settings at your own test server).
+
+## Docker
+
+```bash
+# put real values in .env first (MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, FLASK_SECRET_KEY)
+docker compose up --build -d
+docker compose ps
+docker compose logs -f web
+docker compose down
+```
+
+The `web` container waits for the `mysql` health check, applies the schema idempotently, then serves with gunicorn on port 5000. Inside Docker, MySQL is reached by the service name `mysql`, not `localhost`.
 
 ## Project Structure
 
 ```text
 Attendance_System-Project/
-├── app.py
-├── reset_db.py
-├── check_users.py
-├── migrate_to_mysql.py
-├── requirements.txt
-├── requirements-dev.txt
+├── app.py                  # Flask factory, security hooks, error handlers
+├── config.py               # env-driven dev/test/prod configuration
+├── reset_db.py             # schema init / reset + admin creation
+├── seed_demo.py            # optional demo data
+├── check_users.py          # user listing diagnostic
+├── entrypoint.sh           # Docker startup (wait for MySQL → schema → gunicorn)
+├── Dockerfile
+├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
-├── sample_users.csv.example
+├── requirements.txt
+├── requirements-dev.txt
 ├── database/
-│   ├── db_manager.py
-│   └── schemas/
-│       └── schema.sql
-├── templates/
-│   ├── base.html
-│   ├── login.html
-│   ├── dashboard.html
-│   ├── mark_attendance.html
-│   ├── attendance_summary.html
-│   ├── low_attendance.html
-│   ├── my_attendance.html
-│   ├── monthly_summary.html
-│   ├── request_leave.html
-│   ├── view_leave_requests.html
-│   ├── add_user.html
-│   ├── edit_user.html
-│   ├── add_subject.html
-│   ├── assign_subject.html
-│   └── ...
-├── tests/
-│   └── test_smoke.py
+│   ├── db.py               # pooled MySQL access (parameterized queries)
+│   ├── db_manager.py       # schema ensure/reset/wait-for-server
+│   └── schemas/schema.sql  # canonical MySQL schema
+├── routes/                 # auth, admin, teacher, student, reports, notifications, dashboard
+├── services/               # attendance, leave, report, qr, timetable, academic, user, audit, notification
+├── security/core.py        # login_required, role_required, CSRF, rate limiting
+├── templates/              # base + admin/ teacher/ student/ reports/ errors/
+├── static/css/
+├── tests/                  # pytest suite (uses attendance_test DB)
 ├── docs/
-│   └── (project documentation can be kept here)
 └── uploads/
-    └── .gitkeep
 ```
 
-## Run the project locally
-
-### 1. Clone / extract the project
-
-```bash
-git clone <your-repository-url>
-cd Attendance_System-Project
-```
-
-### 2. Create a virtual environment
-
-**Windows PowerShell:**
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-**Windows CMD:**
-
-```cmd
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-**Linux/macOS:**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-For development/testing:
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-### 4. Initialize the database
-
-The repository intentionally does **not** contain `database/attendance.db`.
-
-Run:
-
-```bash
-python reset_db.py
-```
-
-You will be asked to set the admin password. Press Enter to generate a strong random password, or provide your own password. For an unattended local setup, you can use an environment variable.
-
-**PowerShell:**
-
-```powershell
-$env:ADMIN_PASSWORD="YourStrongPassword"
-python reset_db.py
-```
-
-**CMD:**
-
-```cmd
-set ADMIN_PASSWORD=YourStrongPassword
-python reset_db.py
-```
-
-### 5. Start the application
-
-```bash
-python app.py
-```
-
-Open:
-
-```text
-http://127.0.0.1:5000
-```
-
-Health check:
-
-```text
-http://127.0.0.1:5000/health
-```
-
-### Alternative Flask command
-
-```bash
-flask --app app run
-```
-
-For development debugging:
-
-**PowerShell:**
-
-```powershell
-$env:FLASK_DEBUG="1"
-python app.py
-```
-
-## Environment configuration
-
-Copy `.env.example` to `.env` for your own reference, or set variables in the shell. The application intentionally does not load `.env` automatically, so production deployments should use their platform's environment-variable mechanism.
-
-Important variables:
-
-```text
-FLASK_SECRET_KEY=...
-FLASK_DEBUG=0
-FLASK_HOST=127.0.0.1
-PORT=5000
-ATTENDANCE_DB_PATH=...
-ADMIN_PASSWORD=...
-```
-
-Never commit `.env`, database files, uploaded files, private keys, or generated secrets.
-
-## Bulk user import
-
-Use `sample_users.csv.example` as the column-format reference:
-
-```csv
-Username,Role,Password,Class,Section
-teacher01,teacher,CHANGE_ME,,
-student01,student,CHANGE_ME,AIML,A
-student02,student,CHANGE_ME,AIML,A
-```
-
-Do not put real passwords or personal data into files that will be committed to Git.
-
-## Useful maintenance commands
-
-List database users:
-
-```bash
-python check_users.py
-```
-
-Reset the local database:
-
-```bash
-python reset_db.py
-```
-
-Run smoke tests:
-
-```bash
-pytest -q
-```
-
-## Git and security rules
-
-The `.gitignore` is configured to exclude:
-
-- `.venv/`, caches, compiled Python files
-- `.env` and other local environment files
-- `.flask_secret_key`
-- SQLite/database files (`*.db`, `*.sqlite`, `*.sqlite3`)
-- uploaded files and logs
-- private certificates/keys
-- IDE files and OS junk
-- generated ZIP/build artifacts
-
-If a secret was committed in an earlier Git history, adding it to `.gitignore` is **not enough**. Rotate the secret/password and remove the sensitive data from Git history before publishing the repository.
-
-## Optional MySQL migration
-
-`migrate_to_mysql.py` is kept as an optional migration utility. It is not required to run the Flask application.
-
-Install its extra dependency only when needed:
-
-```bash
-pip install mysql-connector-python
-python migrate_to_mysql.py
-```
-
-Review the migration script and database credentials before using it on real data.
-
-## Recommended next-level features
-
-For a stronger final-year / portfolio project, the next improvements should be:
-
-1. **QR-code attendance:** teacher generates a short-lived QR code and students scan it.
-2. **Dashboard analytics:** charts for attendance trends, subject-wise performance, and class-level statistics.
-3. **Timetable support:** attendance sessions can be tied to scheduled periods.
-4. **Audit log:** track who created, changed, approved, or deleted attendance records.
-5. **Email notifications:** notify students when attendance drops below a threshold or leave is approved/denied.
-6. **Stronger security:** add CSRF protection, rate limiting, account lockout, and production HTTPS configuration.
-7. **Deployment:** Docker + PostgreSQL/MySQL + production WSGI server such as Gunicorn/waitress.
-8. **Role permissions:** move from simple roles to explicit permissions for larger institutions.
-
-## Team Git workflow
-
-Use feature branches rather than committing directly to `main`:
-
-```bash
-git checkout -b feature/qr-attendance
-git add .
-git commit -m "feat: add QR attendance workflow"
-git push -u origin feature/qr-attendance
-```
-
-Then create a Pull Request and review changes before merging.
-
-## Important note
-
-This repository is now intended to contain **source code and project configuration only**. Local databases, credentials, virtual environments, uploaded files, Git metadata, and other runtime artifacts should remain outside the committed source tree.
+## Security Notes
+
+- Passwords hashed with Werkzeug PBKDF2-SHA256 — never stored or logged in plaintext.
+- Role authorization centralized in reusable decorators; every protected route is covered.
+- CSRF token validated before views that rotate the session (e.g. login).
+- All SQL is parameterized — no string-built queries.
+- Session cookies: HttpOnly, SameSite=Lax, optional Secure behind HTTPS.
+- Login rate limiting with a configurable lockout window.
+- Uploads restricted by extension and a maximum size; processed files are deleted.
+- Secrets only via environment variables; `.env` is gitignored.
+- Error pages hide stack traces; DB error messages never expose credentials.
+- QR tokens are HMAC-signed, expire quickly, and only their hash is stored.
+- Duplicate attendance is impossible at the database level.
+- Audit log records sensitive actions (logins, edits, decisions) with IP addresses.
+
+## Future Enhancements
+
+- AI-assisted attendance analytics (anomaly detection, dropout risk).
+- Email/WhatsApp notification delivery.
+- Mobile application with camera QR scanning.
+- Biometric / face-recognition attendance.
+- Cloud deployment with managed MySQL and HTTPS.
+- Per-permission role system for larger institutions.
+
+## Important Note
+
+The repository contains **source code and configuration only**. Local databases, credentials, virtual environments, uploaded files, logs and generated artifacts stay out of Git — see `.gitignore`.

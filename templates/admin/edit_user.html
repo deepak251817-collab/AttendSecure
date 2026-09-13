@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Edit User{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-user-pen me-2"></i>Edit User: {{ user.username }}</h2>
+<div class="card" style="max-width: 720px;">
+  <div class="card-body">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Username *</label>
+          <input type="text" name="username" class="form-control" required
+                 value="{{ user.username }}" pattern="[A-Za-z0-9_.-]{3,50}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Full name</label>
+          <input type="text" name="full_name" class="form-control" value="{{ user.full_name or '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Role *</label>
+          <select name="role" class="form-select" id="roleSelect" required>
+            {% for r in ['student', 'teacher', 'admin'] %}
+            <option value="{{ r }}" {{ 'selected' if user.role == r }}>{{ r | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">New password</label>
+          <input type="password" name="password" class="form-control" minlength="6"
+                 placeholder="Leave blank to keep current">
+        </div>
+
+        <div class="student-fields row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Class</label>
+            <select name="class_id" class="form-select" id="classSelect">
+              <option value="">—</option>
+              {% for c in classes %}
+              <option value="{{ c.class_id }}" {{ 'selected' if user.student_class_id == c.class_id }}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Section</label>
+            <select name="section_id" class="form-select" id="sectionSelect">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Register number</label>
+            <input type="text" name="register_number" class="form-control"
+                   value="{{ user.register_number or '' }}">
+          </div>
+        </div>
+
+        <div class="teacher-fields col-12">
+          <label class="form-label">Department</label>
+          <input type="text" name="department" class="form-control" value="{{ user.department or '' }}">
+        </div>
+        <div class="teacher-fields col-12">
+          <label class="form-label">Assigned subjects</label>
+          <div class="row">
+            {% for s in subjects %}
+            <div class="col-md-4 form-check ms-2">
+              <input class="form-check-input" type="checkbox" name="subject_ids"
+                     value="{{ s.subject_id }}" id="sub{{ s.subject_id }}"
+                     {{ 'checked' if s.subject_id in assigned }}>
+              <label class="form-check-label" for="sub{{ s.subject_id }}">{{ s.name }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+  const sections = {{ sections | tojson }};
+  const roleSelect = document.getElementById('roleSelect');
+  const classSelect = document.getElementById('classSelect');
+  const sectionSelect = document.getElementById('sectionSelect');
+  const currentSection = {{ user.student_section_id or 'null' }};
+
+  function refreshSections() {
+    sectionSelect.innerHTML = '<option value="">—</option>';
+    const cid = classSelect.value;
+    sections.filter(s => String(s.class_id) === cid).forEach(s => {
+      const opt = new Option(s.name, s.section_id);
+      if (currentSection !== null && String(s.section_id) === String(currentSection)) opt.selected = true;
+      sectionSelect.add(opt);
+    });
+  }
+  classSelect.addEventListener('change', refreshSections);
+  refreshSections();
+
+  function refreshRoleFields() {
+    const isStudent = roleSelect.value === 'student';
+    const isTeacher = roleSelect.value === 'teacher';
+    document.querySelectorAll('.student-fields').forEach(el => el.classList.toggle('d-none', !isStudent));
+    document.querySelectorAll('.teacher-fields').forEach(el => el.classList.toggle('d-none', !isTeacher));
+  }
+  roleSelect.addEventListener('change', refreshRoleFields);
+  refreshRoleFields();
+</script>
+{% endblock %}

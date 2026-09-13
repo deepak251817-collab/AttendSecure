@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-chalkboard-teacher me-2"></i>Teacher Dashboard</h2>
+
+<div class="row g-3 mb-4">
+  {% from "partials.html" import stat_card %}
+  {{ stat_card('fa-book', '#4f46e5', 'My Subjects', subjects | length) }}
+  {{ stat_card('fa-school', '#0ea5e9', 'My Classes', classes | length) }}
+  {{ stat_card('fa-check', '#22c55e', 'Today Present', today.get('present', 0)) }}
+  {{ stat_card('fa-xmark', '#ef4444', 'Today Absent', today.get('absent', 0)) }}
+  {{ stat_card('fa-hourglass-half', '#f59e0b', 'Pending Leaves', pending) }}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">Today / Recent — Low Attendance</h5>
+        <a href="{{ url_for('teacher.low_attendance') }}" class="btn btn-sm btn-outline-primary">View all</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Student</th><th>Subject</th><th>%</th><th>Needs</th></tr></thead>
+          <tbody>
+          {% for r in low %}
+            <tr>
+              <td>{{ r.display_name }}</td>
+              <td>{{ r.subject_name or '' }}</td>
+              <td>{{ r.percentage }}%</td>
+              <td>{{ r.classes_needed }} more</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-center text-muted">No low-attendance students.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <h5 class="mb-0">My Timetable</h5>
+        <a href="{{ url_for('teacher.timetable') }}" class="btn btn-sm btn-outline-primary">Full view</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Day</th><th>Period</th><th>Time</th><th>Subject</th><th>Class</th></tr></thead>
+          <tbody>
+          {% for t in timetable[:8] %}
+            <tr>
+              <td>{{ days.get(t.day_of_week, t.day_of_week) }}</td>
+              <td>{{ t.period }}</td>
+              <td>{{ t.start_time }}–{{ t.end_time }}</td>
+              <td>{{ t.subject_name }}</td>
+              <td>{{ t.class_name }}-{{ t.section_name }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center text-muted">No timetable entries yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap">
+  <a href="{{ url_for('teacher.mark_attendance') }}" class="btn btn-primary"><i class="fas fa-clipboard-check me-1"></i> Mark Attendance</a>
+  <a href="{{ url_for('teacher.new_session') }}" class="btn btn-success"><i class="fas fa-qrcode me-1"></i> Start QR Session</a>
+  <a href="{{ url_for('teacher.leave_requests') }}" class="btn btn-outline-primary"><i class="fas fa-envelope-open-text me-1"></i> Review Leaves</a>
+  <a href="{{ url_for('reports.index') }}" class="btn btn-outline-primary"><i class="fas fa-chart-bar me-1"></i> Reports</a>
+</div>
+{% endblock %}

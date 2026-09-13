@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-id-card me-2"></i>My Profile</h2>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Profile information</h5></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Username</dt><dd class="col-sm-8">{{ user.username }}</dd>
+          <dt class="col-sm-4">Register no.</dt><dd class="col-sm-8">{{ user.register_number or '—' }}</dd>
+          <dt class="col-sm-4">Class</dt><dd class="col-sm-8">{{ user.class_name or '—' }}</dd>
+          <dt class="col-sm-4">Section</dt><dd class="col-sm-8">{{ user.section_name or '—' }}</dd>
+        </dl>
+        <hr>
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="profile">
+          <div class="mb-3">
+            <label class="form-label">Full name</label>
+            <input type="text" name="full_name" class="form-control" value="{{ user.full_name or '' }}" required>
+          </div>
+          <button class="btn btn-primary">Save profile</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Change password</h5></div>
+      <div class="card-body">
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="password">
+          <div class="mb-3">
+            <label class="form-label">Current password</label>
+            <input type="password" name="current_password" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">New password</label>
+            <input type="password" name="new_password" class="form-control" required minlength="6">
+          </div>
+          <button class="btn btn-primary">Change password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

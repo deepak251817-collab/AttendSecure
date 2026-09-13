@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h2>
+<div class="row g-3 mb-4">
+  {% from "partials.html" import stat_card %}
+  {{ stat_card('fa-user-graduate', '#4f46e5', 'Students', stats.students) }}
+  {{ stat_card('fa-chalkboard-teacher', '#0ea5e9', 'Teachers', stats.teachers) }}
+  {{ stat_card('fa-book', '#22c55e', 'Subjects', stats.subjects) }}
+  {{ stat_card('fa-school', '#f59e0b', 'Classes', stats.classes) }}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Teachers &amp; Subjects</h5>
+        <a href="{{ url_for('admin.assignments') }}" class="btn btn-sm btn-outline-primary">Manage</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped mb-0">
+          <thead><tr><th>Teacher</th><th>Subjects</th></tr></thead>
+          <tbody>
+          {% for t in teacher_subjects %}
+            <tr>
+              <td>{{ t.display_name }}</td>
+              <td>{{ t.subjects or '—' }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="2" class="text-center text-muted">No teachers yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Quick Actions</h5></div>
+      <div class="card-body d-grid gap-2">
+        <a href="{{ url_for('admin.add_user') }}" class="btn btn-outline-primary"><i class="fas fa-user-plus me-1"></i> Add User</a>
+        <a href="{{ url_for('admin.import_users') }}" class="btn btn-outline-primary"><i class="fas fa-file-import me-1"></i> Bulk Import Users</a>
+        <a href="{{ url_for('admin.academic') }}" class="btn btn-outline-primary"><i class="fas fa-school me-1"></i> Classes, Sections &amp; Subjects</a>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-primary"><i class="fas fa-chart-bar me-1"></i> Reports &amp; Exports</a>
+        <a href="{{ url_for('admin.audit') }}" class="btn btn-outline-secondary"><i class="fas fa-clipboard-list me-1"></i> Audit Logs</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

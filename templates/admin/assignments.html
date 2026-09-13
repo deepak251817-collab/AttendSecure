@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Teacher Subject Assignments{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-link me-2"></i>Assign Subjects to Teachers</h2>
+<div class="card mb-4" style="max-width: 720px;">
+  <div class="card-body">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label">Teacher</label>
+        <select name="teacher_id" class="form-select" required>
+          <option value="">Choose teacher…</option>
+          {% for t in teachers %}
+          <option value="{{ t.teacher_id }}">{{ t.display_name }}{% if t.department %} ({{ t.department }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <label class="form-label">Subjects</label>
+      <div class="row mb-3">
+        {% for s in subjects %}
+        <div class="col-md-4 form-check ms-2">
+          <input class="form-check-input" type="checkbox" name="subject_ids"
+                 value="{{ s.subject_id }}" id="asub{{ s.subject_id }}">
+          <label class="form-check-label" for="asub{{ s.subject_id }}">{{ s.name }}</label>
+        </div>
+        {% endfor %}
+      </div>
+      <button class="btn btn-primary">Save assignments</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="max-width: 720px;">
+  <div class="card-header"><h5 class="mb-0">Current assignments</h5></div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead><tr><th>Teacher</th><th>Subjects</th></tr></thead>
+      <tbody>
+      {% for t in teachers %}
+        <tr>
+          <td>{{ t.display_name }}</td>
+          <td>
+            {% for sid in assignment_map.get(t.teacher_id, []) %}
+              {% set name = (subjects | selectattr('subject_id', 'equalto', sid) | list | first).name %}
+              <span class="badge bg-light text-dark border">{{ name }}</span>
+            {% else %}
+              <span class="text-muted">None</span>
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Academic Data{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-school me-2"></i>Classes, Sections &amp; Subjects</h2>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Classes &amp; Sections</h5>
+        <form class="d-flex gap-2" method="POST" action="{{ url_for('admin.add_class') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="name" class="form-control form-control-sm" placeholder="New class name" required>
+          <button class="btn btn-sm btn-primary">Add class</button>
+        </form>
+      </div>
+      <div class="card-body">
+        {% for c in classes %}
+        <div class="border rounded p-2 mb-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <strong>{{ c.name }}</strong>
+            <form method="POST" action="{{ url_for('admin.delete_class', class_id=c.class_id) }}"
+                  onsubmit="return confirm('Delete class {{ c.name }} and all its data?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+            </form>
+          </div>
+          <ul class="list-inline mb-1 mt-1">
+            {% for s in c.sections %}
+            <li class="list-inline-item badge bg-light text-dark border">
+              Section {{ s.name }} ({{ s.student_count }} students)
+              <form class="d-inline" method="POST" action="{{ url_for('admin.delete_section', section_id=s.section_id) }}"
+                    onsubmit="return confirm('Delete section {{ s.name }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-link btn-sm text-danger p-0"><i class="fas fa-times"></i></button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+          <form class="d-flex gap-2" method="POST" action="{{ url_for('admin.add_section') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="class_id" value="{{ c.class_id }}">
+            <input type="text" name="name" class="form-control form-control-sm" placeholder="New section (e.g. A)" required>
+            <button class="btn btn-sm btn-outline-primary">Add section</button>
+          </form>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No classes yet. Add the first one above.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Subjects</h5>
+      </div>
+      <div class="card-body">
+        <form class="row g-2 mb-3" method="POST" action="{{ url_for('admin.add_subject') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="col-5"><input type="text" name="code" class="form-control form-control-sm" placeholder="Code"></div>
+          <div class="col-5"><input type="text" name="name" class="form-control form-control-sm" placeholder="Subject name" required></div>
+          <div class="col-2"><button class="btn btn-sm btn-primary w-100">Add</button></div>
+        </form>
+        <table class="table table-sm">
+          <thead><tr><th>Code</th><th>Name</th><th>Teachers</th><th></th></tr></thead>
+          <tbody>
+          {% for s in subjects %}
+            <tr>
+              <td>{{ s.code or '—' }}</td>
+              <td>{{ s.name }}</td>
+              <td>{{ s.teacher_count }}</td>
+              <td>
+                <form method="POST" action="{{ url_for('admin.delete_subject', subject_id=s.subject_id) }}"
+                      onsubmit="return confirm('Delete subject {{ s.name }}?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-muted text-center">No subjects yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

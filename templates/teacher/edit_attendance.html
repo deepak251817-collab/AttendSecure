@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Edit Attendance{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-pen me-2"></i>Edit Attendance</h2>
+<div class="card" style="max-width: 560px;">
+  <div class="card-body">
+    <dl class="row">
+      <dt class="col-sm-4">Student</dt><dd class="col-sm-8">{{ record.username }}</dd>
+      <dt class="col-sm-4">Subject</dt><dd class="col-sm-8">{{ record.subject_name }}</dd>
+      <dt class="col-sm-4">Date</dt><dd class="col-sm-8">{{ record.attendance_date }} (period {{ record.period }})</dd>
+      <dt class="col-sm-4">Current status</dt><dd class="col-sm-8">{{ record.status }}</dd>
+    </dl>
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label">New status</label>
+        <select name="status" class="form-select" required>
+          {% for st in ['present', 'absent', 'leave'] %}
+          <option value="{{ st }}" {{ 'selected' if record.status == st }}>{{ st | capitalize }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Reason (optional, stored in history)</label>
+        <input type="text" name="reason" class="form-control" maxlength="255"
+               placeholder="e.g. Late bus, verified medical leave">
+      </div>
+      <button type="submit" class="btn btn-primary">Save</button>
+      <a href="{{ url_for('teacher.view_attendance') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

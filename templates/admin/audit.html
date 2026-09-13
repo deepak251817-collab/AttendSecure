@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block content %}
+<h2 class="mb-3"><i class="fas fa-clipboard-list me-2"></i>Audit Logs <span class="badge bg-secondary">{{ total }}</span></h2>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-3">
+    <select name="user_id" class="form-select">
+      <option value="">All users</option>
+      {% for u in users %}
+      <option value="{{ u.user_id }}" {{ 'selected' if user_id == u.user_id }}>{{ u.username }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <input type="text" name="action" class="form-control" placeholder="Action contains…" value="{{ action or '' }}">
+  </div>
+  <div class="col-md-2">
+    <input type="date" name="date" class="form-control" value="{{ date or '' }}">
+  </div>
+  <div class="col-md-2">
+    <select name="entity_type" class="form-select">
+      <option value="">Any entity</option>
+      {% for e in ['user', 'attendance', 'leave', 'subject', 'class', 'teacher'] %}
+      <option value="{{ e }}" {{ 'selected' if entity_type == e }}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100">Filter</button>
+  </div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-striped mb-0">
+      <thead>
+        <tr><th>When</th><th>User</th><th>Action</th><th>Entity</th><th>Description</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="text-nowrap">{{ r.created_at }}</td>
+          <td>{{ r.username or 'system' }}</td>
+          <td><span class="badge bg-dark">{{ r.action }}</span></td>
+          <td>{{ r.entity_type or '' }}{% if r.entity_id %} #{{ r.entity_id }}{% endif %}</td>
+          <td>{{ r.description or '' }}</td>
+          <td class="text-muted small">{{ r.ip_address or '' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="text-center text-muted">No audit entries.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% from "macros.html" import pagination %}
+{{ pagination('admin.audit', page, pages, params=dict(request.args)) }}
+{% endblock %}
