@@ -1,257 +1,698 @@
-# Attendance Management System
+# AttendSecure
 
-A role-based college attendance management system built with **Flask 3 + MySQL 8**, featuring attendance tracking, leave workflows, secure QR check-in with anti-proxy protection, analytics dashboards, timetable management, audit logging and Excel/CSV/PDF report exports.
+### Secure Smart Attendance Management System
 
-## Team
+> **Smart, Secure & Simple Attendance Management**
 
-| Member | Role |
-|---|---|
-| Deepak R | Developer |
-| Yashaswini M | Developer |
+AttendSecure is a full-stack attendance management platform designed for educational institutions. It provides role-based attendance management for **Administrators, Teachers, and Students**, with secure QR-based attendance, anti-proxy validation, attendance analytics, timetable management, leave workflows, notifications, audit logging, and reporting.
 
-## Project Overview
+Built with **Flask and MySQL**, AttendSecure focuses on security, usability, maintainability, and practical deployment.
 
-The system serves three roles:
+---
 
-- **Admin** — manages users (single or bulk import), classes, sections, subjects, teacher-subject assignments, the timetable, reports and the audit log.
-- **Teacher** — views assigned subjects/classes, marks and edits attendance (with a full edit history), runs time-limited QR attendance sessions, reviews leave requests for relevant classes and exports reports.
-- **Student** — views overall and subject-wise attendance, monthly trends and timetable, submits leave requests and tracks their status, checks in via QR and manages their profile/password.
+## ✨ Features
 
-## Features
+### 🔐 Authentication & Security
 
-### Phase 1 — Core
-- Full MySQL 8 backend (InnoDB, utf8mb4) — no SQLite anywhere.
-- Session authentication with hashed passwords (PBKDF2-SHA256 via Werkzeug).
-- Role-based access control with reusable `@login_required` / `@role_required` decorators.
-- Attendance marking per class/section/subject/date/period with statuses `present` / `absent` / `leave`.
-- Duplicate prevention by a database-level unique constraint on `(student, subject, date, period)`.
-- Leave workflow: student submits → relevant teacher approves/rejects → student sees the result.
-- CSRF protection on every state-changing request; HttpOnly + SameSite session cookies.
-- Login rate limiting (configurable attempts + lockout window).
+* Secure login and logout
+* Password hashing
+* Role-based access control
+* Admin, Teacher, and Student roles
+* Secure session management
+* CSRF protection
+* Parameterized MySQL queries
+* Environment-based secrets
+* Server-side input validation
+* Login protection and rate limiting
+* Audit logging
+* Secure error handling
 
-### Phase 2 — Analytics, Timetable, Reports
-- Admin / Teacher / Student dashboards with live counters.
-- Daily, weekly and monthly attendance analytics with Chart.js trend charts.
-- Low-attendance detection with a configurable threshold (default 75%) **and** a “classes needed to reach the threshold” calculation.
-- Timetable management with backend conflict validation (double-booked teacher, clashing class slot).
-- Report exports to **Excel** (openpyxl), **CSV** and **PDF** (ReportLab) with title, filters and summary.
-- Server-side search, filtering, sorting and pagination on users, attendance history and audit logs.
+### 👨‍💼 Admin
 
-### Phase 3 — QR, Notifications, Audit
-- QR attendance sessions: the teacher generates a signed, expiring token; only its SHA-256 hash is stored server-side.
-- Scans validate on the server: token signature, expiry, session active, student’s section match and duplicate check (DB constraint).
-- **Anti-proxy hardening (Secure QR attendance):**
-  - *Dynamic rotating QR* — the projected code refreshes every few seconds (signed rotation nonce), so screenshots and forwarded images lose value quickly while remaining server-valid for the session.
-  - *Optional geolocation fence* — the teacher’s classroom position is captured at session start; student check-ins are rejected outside the configured radius (configurable, default 150 m).
-  - *Device-sharing detection* — salted device fingerprints identify devices used by several students in one session (the screenshot-share signature) and flag them on the teacher’s live screen.
-  - *Scan-event audit trail* — every scan attempt (success, duplicate, rejected) is recorded with device hash, coordinates, distance and IP, visible via the live check-in feed.
-- In-app notifications with unread badge, mark-read and mark-all-read.
-- Audit logging of logins, user changes, attendance edits, leave decisions and more — filterable by user/action/date/entity.
-- Dedicated `attendance_edits` history (old status, new status, who, when, reason).
+* Manage students
+* Manage teachers
+* Manage classes and sections
+* Manage subjects
+* Assign subjects to teachers
+* Manage timetable
+* View attendance
+* Generate attendance reports
+* Monitor low-attendance students
+* View audit logs
+* Monitor suspicious attendance activity
+* Manage notifications and settings
 
-### Phase 4 — Operations
-- 74-test pytest suite against a dedicated `attendance_test` database.
-- Docker + Docker Compose with health checks and a wait-for-MySQL entrypoint.
-- Structured logging to console and rotating file (`logs/attendance.log`).
-- Custom error pages for 400/401/403/404/405/429/500 — no stack traces to end users.
+### 👨‍🏫 Teacher
 
-## Technology Stack
+* View assigned subjects
+* View assigned classes
+* Mark attendance
+* Edit authorized attendance records
+* Start secure QR attendance sessions
+* View live attendance counts
+* Manage relevant leave requests
+* View student attendance
+* View timetable
+* Generate reports
+* Monitor low-attendance students
 
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.11+, Flask 3.x |
-| Database | MySQL 8.x (mysql-connector-python) |
-| Frontend | Jinja2, HTML5, CSS3, Bootstrap 5, vanilla JavaScript |
-| Charts | Chart.js 4 |
-| Exports | pandas + openpyxl (Excel), ReportLab (PDF) |
-| QR | qrcode + Pillow |
-| Config | python-dotenv |
-| Tests | pytest |
-| Deployment | Docker, Docker Compose, gunicorn |
+### 👨‍🎓 Student
 
-## System Architecture
+* View personal dashboard
+* View overall attendance
+* View subject-wise attendance
+* View attendance history
+* Scan QR codes for attendance
+* Submit leave requests
+* Track leave request status
+* View timetable
+* Receive notifications
+* Download attendance reports
+* Update profile
+* Change password
+
+---
+
+## 🔒 Secure QR Attendance
+
+AttendSecure uses multiple validation layers to **reduce proxy attendance**.
+
+### Security layers
+
+* Dynamic QR tokens
+* Short-lived attendance sessions
+* Authenticated students
+* Server-side identity verification
+* Class and section validation
+* Subject validation
+* Teacher authorization
+* Duplicate attendance prevention
+* Optional location verification
+* Rate limiting
+* Attendance attempt tracking
+* Suspicious activity detection
+* Audit logging
+
+### Attendance flow
 
 ```text
-Browser (Bootstrap 5 UI, Chart.js)
-   ↓  HTTP
-Flask app  (app.py — factory, error handlers, logging, security hooks)
-   ↓
-Routes layer  (routes/ — auth, admin, teacher, student, reports, notifications)
-   ↓
-Service layer (services/ — business rules, authorization, validation)
-   ↓
-Database layer (database/db.py — pooled, parameterized queries)
-   ↓
-MySQL 8  (InnoDB, utf8mb4, FKs + unique constraints)
+Teacher Login
+     ↓
+Select Class / Subject / Period
+     ↓
+Start Attendance Session
+     ↓
+Dynamic QR Code
+     ↓
+Student Login
+     ↓
+Scan QR
+     ↓
+Server Validation
+     ↓
+Class / Subject Verification
+     ↓
+Duplicate Check
+     ↓
+Optional Location Verification
+     ↓
+Attendance Recorded
 ```
 
-## Database Architecture
+> QR attendance is designed to **reduce proxy attendance**. No normal web-based attendance system can guarantee that the person physically using a device is the legitimate account owner.
 
-`database/schemas/schema.sql` defines (all InnoDB / utf8mb4, with FKs, unique keys and indexes):
+---
 
-| Table | Purpose |
-|---|---|
-| `users` | Login accounts for all roles (hashed passwords) |
-| `students` / `teachers` | Profile rows linked 1:1 to users |
-| `classes` / `sections` | Academic structure (section belongs to a class) |
-| `subjects` | Subjects with optional code |
-| `teacher_subjects` | Which teacher teaches which subject (unique pair) |
-| `timetable` | Class/section schedule with day, period, times + conflict-preventing unique key |
-| `attendance` | One row per student+subject+date+period (`UNIQUE` — the dedupe guarantee) |
-| `attendance_edits` | History of attendance status changes |
-| `leave_requests` | Student leave workflow (pending/approved/rejected) |
-| `attendance_sessions` | QR sessions (token **hash** only, expiry, active flag, rotation nonce, geo fence) |
-| `qr_scan_events` | Every QR scan attempt: result, reason, device hash, coordinates, IP |
-| `notifications` | In-app user notifications |
-| `audit_logs` | Who did what, when, from where |
-| `settings` | Key/value application settings |
+## 📊 Attendance Analytics
 
-Relationships: `students.class_id → classes`, `students.section_id → sections`, `attendance.student_id → students`, `attendance.subject_id → subjects`, `leave_requests.student_id/teacher_id → students/teachers`, plus cascading deletes from `users`.
+AttendSecure provides:
 
-## User Roles
+* Daily attendance
+* Weekly attendance
+* Monthly attendance
+* Subject-wise attendance
+* Class-wise attendance
+* Student-wise attendance
+* Attendance percentage
+* Present / Absent / Leave distribution
+* Attendance trends
+* Low-attendance identification
 
-| Role | Can |
-|---|---|
-| Admin | Users CRUD + bulk import, classes/sections/subjects, teacher-subject assignments, timetable, all reports, audit logs |
-| Teacher | Mark/edit attendance (own subjects only), QR sessions, attendance summaries, low-attendance alerts, leave decisions for relevant classes, own timetable, authorized reports |
-| Student | Personal dashboards and attendance history, leave requests, QR check-in, timetable, profile + password change |
+### Attendance threshold
 
-## Installation
+Default threshold:
 
-### 1. Python setup
+```text
+75%
+```
+
+Students below the threshold can be identified for follow-up.
+
+---
+
+## 📅 Timetable Management
+
+Administrators can manage:
+
+* Class
+* Section
+* Subject
+* Teacher
+* Day
+* Period
+* Start time
+* End time
+
+The system validates common timetable conflicts such as overlapping class or teacher assignments.
+
+---
+
+## 📝 Leave Management
+
+Students can submit leave requests with:
+
+* Start date
+* End date
+* Reason
+
+Teachers can review and approve or reject relevant requests.
+
+### Workflow
+
+```text
+Student
+   ↓
+Submit Leave Request
+   ↓
+Teacher Review
+   ↓
+Approve / Reject
+   ↓
+Student Notification
+```
+
+---
+
+## 🔔 Notifications
+
+The application provides in-app notifications for events such as:
+
+* Leave approval
+* Leave rejection
+* Low-attendance warnings
+* Attendance updates
+* Important system activity
+
+Users can view unread notifications and mark them as read.
+
+---
+
+## 🧾 Audit Logging
+
+Important system actions are recorded for accountability.
+
+Examples:
+
+* Login/logout
+* Attendance creation
+* Attendance modification
+* QR attendance attempts
+* Failed verification
+* Location verification failures
+* Leave approval/rejection
+* User creation
+* Subject assignment
+* Timetable changes
+
+Passwords, secret keys, and database credentials must never be stored in audit logs.
+
+---
+
+## 📄 Reports
+
+AttendSecure supports:
+
+* Daily attendance reports
+* Weekly attendance reports
+* Monthly attendance reports
+* Student attendance reports
+* Subject reports
+* Class reports
+* Low-attendance reports
+
+Depending on the enabled modules, reports can be exported to:
+
+* Excel
+* CSV
+* PDF
+
+---
+
+## 🎨 UI & User Experience
+
+AttendSecure provides a modern responsive interface with:
+
+* AttendSecure branding
+* Responsive sidebar
+* Responsive navigation
+* Dashboard cards
+* Charts and analytics
+* Search and filtering
+* Toast notifications
+* Loading states
+* Empty states
+* Error pages
+* Profile menu
+* Secure QR interface
+* Smooth UI animations
+* Responsive layouts
+
+### 🌗 Theme Support
+
+The application supports:
+
+```text
+Light
+Dark
+System
+```
+
+Theme preferences are persisted for the user.
+
+Theme support covers:
+
+* Header
+* Sidebar
+* Dashboard
+* Cards
+* Tables
+* Forms
+* Dropdowns
+* Modals
+* Charts
+* Reports
+* QR attendance pages
+* Login page
+
+---
+
+## 🧰 Technology Stack
+
+### Backend
+
+* Python
+* Flask
+* Jinja2
+
+### Database
+
+* MySQL 8+
+
+### Frontend
+
+* HTML5
+* CSS3
+* JavaScript
+* Bootstrap
+* Chart.js where applicable
+
+### Testing
+
+* pytest
+* Dedicated MySQL test database
+
+### Deployment
+
+* Docker
+* Docker Compose
+
+---
+
+## 📁 Project Structure
+
+```text
+AttendSecure/
+│
+├── app.py
+├── config.py
+├── reset_db.py
+├── seed_demo.py
+├── check_users.py
+│
+├── requirements.txt
+├── requirements-dev.txt
+├── pytest.ini
+├── Dockerfile
+├── docker-compose.yml
+├── entrypoint.sh
+│
+├── .env.example
+├── .gitignore
+├── README.md
+│
+├── database/
+│   ├── db_manager.py
+│   └── schemas/
+│       └── schema.sql
+│
+├── routes/
+├── services/
+├── security/
+│
+├── templates/
+├── static/
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── tests/
+├── docs/
+│
+└── uploads/
+    └── .gitkeep
+```
+
+> The structure may evolve as the project is developed.
+
+---
+
+## ⚙️ Requirements
+
+Install:
+
+* Python 3.11+
+* MySQL 8+
+* Git
+
+For Docker:
+
+* Docker
+* Docker Compose
+
+---
+
+## 🚀 Local Installation
+
+### 1. Clone the repository
 
 ```bash
-git clone <your-repository-url>
-cd Attendance_System-Project
+git clone https://github.com/YOUR_USERNAME/AttendSecure.git
+cd AttendSecure
+```
+
+Replace `YOUR_USERNAME` with your GitHub username.
+
+### 2. Create a virtual environment
+
+#### Windows
+
+```powershell
 python -m venv .venv
-# Windows:  .venv\Scripts\activate     Linux/macOS: source .venv/bin/activate
+.venv\Scripts\activate
+```
+
+#### Linux / macOS
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. MySQL setup
-
-Install MySQL 8 locally **or** use the bundled Docker service (step 6). The application needs a database user with create/read/write rights.
-
-### 3. Environment configuration
+For development and testing:
 
 ```bash
-cp .env.example .env    # then edit .env with your values
+pip install -r requirements-dev.txt
 ```
 
-### 4. Database initialization
+---
 
-```bash
-python reset_db.py           # creates schema if missing, prompts for admin password
-python reset_db.py --reset   # drops and recreates everything (destructive!)
-python seed_demo.py          # optional demo data for presentations
-python check_users.py        # list accounts (diagnostics)
+## 🗄️ MySQL Configuration
+
+Create the database:
+
+```sql
+CREATE DATABASE attendance
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 ```
 
-`reset_db.py` reads `ADMIN_PASSWORD` from the environment for unattended setups or prompts securely otherwise. The admin password is never stored in Git.
+Create a local `.env` file using `.env.example` as a template.
 
-### 5. Run
-
-```bash
-python app.py
-# open http://127.0.0.1:5000
-```
-
-Health check: `http://127.0.0.1:5000/health`
-
-## MySQL Configuration
-
-All connection values come from environment variables (see `.env.example`):
+Example:
 
 ```env
-FLASK_SECRET_KEY=replace-with-a-secure-secret
-FLASK_DEBUG=0
-FLASK_HOST=127.0.0.1
-FLASK_PORT=5000
+FLASK_SECRET_KEY=replace-with-a-secure-random-secret
 
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_DATABASE=attendance
 MYSQL_USER=root
-MYSQL_PASSWORD=
+MYSQL_PASSWORD=your_mysql_password
+
+FLASK_DEBUG=0
+FLASK_HOST=127.0.0.1
+FLASK_PORT=5000
 ```
 
-Never commit `.env`. `APP_ENV` selects `development` / `testing` / `production` configuration (default: development). Tests always use `TEST_MYSQL_DATABASE` (default `attendance_test`).
+### Important
 
-## Test Instructions
+Never commit `.env`.
 
-```bash
-pip install -r requirements-dev.txt
-pytest -q
+Only commit:
+
+```text
+.env.example
 ```
 
-The suite (74 tests) resets and uses the dedicated `attendance_test` database — it never touches your dev data. MySQL must be reachable (start the Docker service first, or point `TEST_MYSQL_DATABASE` settings at your own test server).
+Never publish your MySQL password or application secret.
 
-## Docker
+---
+
+## 🗃️ Database Initialization
+
+Initialize the MySQL database:
 
 ```bash
-# put real values in .env first (MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, FLASK_SECRET_KEY)
-docker compose up --build -d
-docker compose ps
-docker compose logs -f web
+python reset_db.py
+```
+
+The main schema is maintained in:
+
+```text
+database/schemas/schema.sql
+```
+
+For local demonstration data, where supported:
+
+```bash
+python seed_demo.py
+```
+
+Use demo credentials only for local development.
+
+---
+
+## ▶️ Run the Application
+
+```bash
+python app.py
+```
+
+Open:
+
+```text
+http://127.0.0.1:5000
+```
+
+---
+
+## 🐳 Docker
+
+Build and start:
+
+```bash
+docker compose up --build
+```
+
+Stop:
+
+```bash
 docker compose down
 ```
 
-The `web` container waits for the `mysql` health check, applies the schema idempotently, then serves with gunicorn on port 5000. Inside Docker, MySQL is reached by the service name `mysql`, not `localhost`.
+Remove containers and local development volumes:
 
-## Project Structure
-
-```text
-Attendance_System-Project/
-├── app.py                  # Flask factory, security hooks, error handlers
-├── config.py               # env-driven dev/test/prod configuration
-├── reset_db.py             # schema init / reset + admin creation
-├── seed_demo.py            # optional demo data
-├── check_users.py          # user listing diagnostic
-├── entrypoint.sh           # Docker startup (wait for MySQL → schema → gunicorn)
-├── Dockerfile
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-├── requirements.txt
-├── requirements-dev.txt
-├── database/
-│   ├── db.py               # pooled MySQL access (parameterized queries)
-│   ├── db_manager.py       # schema ensure/reset/wait-for-server
-│   └── schemas/schema.sql  # canonical MySQL schema
-├── routes/                 # auth, admin, teacher, student, reports, notifications, dashboard
-├── services/               # attendance, leave, report, qr, timetable, academic, user, audit, notification
-├── security/core.py        # login_required, role_required, CSRF, rate limiting
-├── templates/              # base + admin/ teacher/ student/ reports/ errors/
-├── static/css/
-├── tests/                  # pytest suite (uses attendance_test DB)
-├── docs/
-└── uploads/
+```bash
+docker compose down -v
 ```
 
-## Security Notes
+> Use `docker compose down -v` carefully because it can remove local MySQL development data.
 
-- Passwords hashed with Werkzeug PBKDF2-SHA256 — never stored or logged in plaintext.
-- Role authorization centralized in reusable decorators; every protected route is covered.
-- CSRF token validated before views that rotate the session (e.g. login).
-- All SQL is parameterized — no string-built queries.
-- Session cookies: HttpOnly, SameSite=Lax, optional Secure behind HTTPS.
-- Login rate limiting with a configurable lockout window.
-- Uploads restricted by extension and a maximum size; processed files are deleted.
-- Secrets only via environment variables; `.env` is gitignored.
-- Error pages hide stack traces; DB error messages never expose credentials.
-- QR tokens are HMAC-signed, expire quickly, and only their hash is stored. Dynamic sessions rotate the projected code; optional geo fences, device-sharing flags and a full scan-event audit trail make proxy attendance harder and traceable.
-- Duplicate attendance is impossible at the database level.
-- Audit log records sensitive actions (logins, edits, decisions) with IP addresses.
+---
 
-## Future Enhancements
+## 🧪 Testing
 
-- AI-assisted attendance analytics (anomaly detection, dropout risk).
-- Email/WhatsApp notification delivery.
-- Mobile application with camera QR scanning.
-- Biometric / face-recognition attendance.
-- Cloud deployment with managed MySQL and HTTPS.
-- Per-permission role system for larger institutions.
+Use a dedicated MySQL test database.
 
-## Important Note
+Run:
 
-The repository contains **source code and configuration only**. Local databases, credentials, virtual environments, uploaded files, logs and generated artifacts stay out of Git — see `.gitignore`.
+```bash
+pytest -q
+```
+
+The test suite covers areas such as:
+
+* Authentication
+* Authorization
+* Attendance
+* Duplicate prevention
+* Leave management
+* Reports
+* QR attendance
+* Security validation
+* Notifications
+* Audit logging
+
+Do not run destructive tests against the real development database.
+
+---
+
+## 🔐 Environment Variables
+
+Main configuration:
+
+```text
+FLASK_SECRET_KEY
+MYSQL_HOST
+MYSQL_PORT
+MYSQL_DATABASE
+MYSQL_USER
+MYSQL_PASSWORD
+FLASK_DEBUG
+FLASK_HOST
+FLASK_PORT
+```
+
+Additional feature configuration may include:
+
+```text
+QR refresh interval
+Attendance session duration
+Location verification
+Attendance radius
+Rate limiting
+```
+
+See `.env.example` for the supported configuration.
+
+---
+
+## 👥 Team
+
+### Deepak R
+
+* Full-stack development
+* MySQL/database integration
+* Authentication and security
+* Attendance functionality
+* QR attendance
+
+### Yashaswini M
+
+* Frontend/UI development
+* User experience
+* Testing
+* Documentation
+* Feature integration
+
+> Team responsibilities may evolve during development.
+
+---
+
+## 📌 Project Goals
+
+AttendSecure aims to:
+
+* Simplify attendance management
+* Reduce manual attendance work
+* Improve attendance visibility
+* Reduce proxy attendance
+* Provide useful attendance analytics
+* Simplify report generation
+* Improve student-teacher communication
+* Maintain an auditable attendance history
+* Provide a secure and maintainable architecture
+
+---
+
+## 🔮 Future Enhancements
+
+Potential future improvements include:
+
+* Email notifications
+* Mobile application
+* Advanced attendance analytics
+* AI-assisted attendance insights
+* Cloud deployment
+* Advanced anomaly detection
+* Multi-campus institutional support
+
+These are future possibilities and should not be considered implemented unless they exist in the current codebase.
+
+---
+
+## 🛡️ Security Guidelines
+
+Never commit:
+
+```text
+.env
+database passwords
+API keys
+secret keys
+real student data
+real user passwords
+private certificates
+database dumps
+runtime logs
+```
+
+The repository should contain configuration templates rather than real credentials.
+
+---
+
+## 📜 License
+
+This project is intended to be released under the **MIT License**.
+
+See the [`LICENSE`](LICENSE) file for details.
+
+---
+
+## 🔗 Repository
+
+**Project Name:** AttendSecure
+
+**Repository:**
+
+```text
+https://github.com/deepak251817-collab/AttendSecure
+```
+
+**GitHub Description:**
+
+> Smart and secure attendance management system with dynamic QR attendance, analytics, reports, notifications, and anti-proxy protection.
+
+---
+
+# AttendSecure
+
+### Smart, Secure & Simple Attendance Management
+
+**Built by Deepak R & Yashaswini M**
