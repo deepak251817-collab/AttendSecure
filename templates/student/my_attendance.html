@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}My Attendance{% endblock %}
+{% block title %}AttendSecure | My Attendance{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-calendar-check me-2"></i>My Attendance</h2>
 
 <div class="row g-3 mb-4">
   {% from "partials.html" import stat_card %}
-  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
-  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
-  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
-  {{ stat_card('fa-plane', '#f59e0b', 'Leave', overall.leave) }}
+  {{ stat_card('fa-percent', '#2563eb', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-check', '#16a34a', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#dc2626', 'Absent', overall.absent) }}
+  {{ stat_card('fa-plane', '#d97706', 'Leave', overall.leave) }}
 </div>
 
 <div class="card mb-4">

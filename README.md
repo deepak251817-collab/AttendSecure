@@ -1,6 +1,6 @@
 # Attendance Management System
 
-A role-based college attendance management system built with **Flask 3 + MySQL 8**, featuring attendance tracking, leave workflows, QR-code check-in, analytics dashboards, timetable management, audit logging and Excel/CSV/PDF report exports.
+A role-based college attendance management system built with **Flask 3 + MySQL 8**, featuring attendance tracking, leave workflows, secure QR check-in with anti-proxy protection, analytics dashboards, timetable management, audit logging and Excel/CSV/PDF report exports.
 
 ## Team
 
@@ -40,12 +40,17 @@ The system serves three roles:
 ### Phase 3 — QR, Notifications, Audit
 - QR attendance sessions: the teacher generates a signed, expiring token; only its SHA-256 hash is stored server-side.
 - Scans validate on the server: token signature, expiry, session active, student’s section match and duplicate check (DB constraint).
+- **Anti-proxy hardening (Secure QR attendance):**
+  - *Dynamic rotating QR* — the projected code refreshes every few seconds (signed rotation nonce), so screenshots and forwarded images lose value quickly while remaining server-valid for the session.
+  - *Optional geolocation fence* — the teacher’s classroom position is captured at session start; student check-ins are rejected outside the configured radius (configurable, default 150 m).
+  - *Device-sharing detection* — salted device fingerprints identify devices used by several students in one session (the screenshot-share signature) and flag them on the teacher’s live screen.
+  - *Scan-event audit trail* — every scan attempt (success, duplicate, rejected) is recorded with device hash, coordinates, distance and IP, visible via the live check-in feed.
 - In-app notifications with unread badge, mark-read and mark-all-read.
 - Audit logging of logins, user changes, attendance edits, leave decisions and more — filterable by user/action/date/entity.
 - Dedicated `attendance_edits` history (old status, new status, who, when, reason).
 
 ### Phase 4 — Operations
-- 68-test pytest suite against a dedicated `attendance_test` database.
+- 74-test pytest suite against a dedicated `attendance_test` database.
 - Docker + Docker Compose with health checks and a wait-for-MySQL entrypoint.
 - Structured logging to console and rotating file (`logs/attendance.log`).
 - Custom error pages for 400/401/403/404/405/429/500 — no stack traces to end users.
@@ -95,7 +100,8 @@ MySQL 8  (InnoDB, utf8mb4, FKs + unique constraints)
 | `attendance` | One row per student+subject+date+period (`UNIQUE` — the dedupe guarantee) |
 | `attendance_edits` | History of attendance status changes |
 | `leave_requests` | Student leave workflow (pending/approved/rejected) |
-| `attendance_sessions` | QR sessions (token **hash** only, expiry, active flag) |
+| `attendance_sessions` | QR sessions (token **hash** only, expiry, active flag, rotation nonce, geo fence) |
+| `qr_scan_events` | Every QR scan attempt: result, reason, device hash, coordinates, IP |
 | `notifications` | In-app user notifications |
 | `audit_logs` | Who did what, when, from where |
 | `settings` | Key/value application settings |
@@ -178,7 +184,7 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
-The suite (68 tests) resets and uses the dedicated `attendance_test` database — it never touches your dev data. MySQL must be reachable (start the Docker service first, or point `TEST_MYSQL_DATABASE` settings at your own test server).
+The suite (74 tests) resets and uses the dedicated `attendance_test` database — it never touches your dev data. MySQL must be reachable (start the Docker service first, or point `TEST_MYSQL_DATABASE` settings at your own test server).
 
 ## Docker
 
@@ -233,7 +239,7 @@ Attendance_System-Project/
 - Uploads restricted by extension and a maximum size; processed files are deleted.
 - Secrets only via environment variables; `.env` is gitignored.
 - Error pages hide stack traces; DB error messages never expose credentials.
-- QR tokens are HMAC-signed, expire quickly, and only their hash is stored.
+- QR tokens are HMAC-signed, expire quickly, and only their hash is stored. Dynamic sessions rotate the projected code; optional geo fences, device-sharing flags and a full scan-event audit trail make proxy attendance harder and traceable.
 - Duplicate attendance is impossible at the database level.
 - Audit log records sensitive actions (logins, edits, decisions) with IP addresses.
 

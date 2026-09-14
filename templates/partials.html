@@ -1,17 +1,59 @@
 {% macro stat_card(icon, color, label, value) %}
-<div class="col-6 col-md-4 col-lg">
+<div class="col-6 col-md-4 col-lg animate-card">
   <div class="card stat-card">
-    <div class="card-body d-flex align-items-center gap-3">
-      <div class="icon" style="background: {{ color }}">
-        <i class="fas {{ icon }}"></i>
+    <div class="card-body">
+      <div class="stat-top">
+        <span class="stat-ico" style="color: {{ color }}; background: color-mix(in srgb, {{ color }} 12%, transparent);">
+          <i class="fas {{ icon }}" aria-hidden="true"></i>
+        </span>
+        <span class="text-muted small">{{ label }}</span>
       </div>
-      <div>
-        <div class="fs-4 fw-bold">{{ value }}</div>
-        <div class="text-muted small">{{ label }}</div>
-      </div>
+      <div class="fs-4 mt-1">{{ value }}</div>
     </div>
   </div>
 </div>
+{% endmacro %}
+
+{% macro nav_links() %}
+{# Shared sidebar links for the signed-in role. `section` marks the
+   first link as the dashboard for active-state matching. #}
+{% set _nav = {
+  'admin': [
+    ('admin.dashboard', 'Dashboard', 'fa-gauge-high'),
+    ('admin.users', 'Users', 'fa-users'),
+    ('admin.academic', 'Classes & Subjects', 'fa-building-columns'),
+    ('admin.assignments', 'Assignments', 'fa-link'),
+    ('reports.index', 'Reports', 'fa-chart-bar'),
+    ('admin.audit', 'Audit Logs', 'fa-clock-rotate-left'),
+    ('notifications.list_notifications', 'Notifications', 'fa-bell'),
+  ],
+  'teacher': [
+    ('teacher.dashboard', 'Dashboard', 'fa-gauge-high'),
+    ('teacher.mark_attendance', 'Mark Attendance', 'fa-clipboard-check'),
+    ('teacher.view_attendance', 'Attendance', 'fa-list-check'),
+    ('teacher.new_session', 'Secure QR Attendance', 'fa-qrcode'),
+    ('teacher.leave_requests', 'Leave Requests', 'fa-envelope-open-text'),
+    ('teacher.timetable', 'Timetable', 'fa-calendar-days'),
+    ('reports.index', 'Reports', 'fa-chart-bar'),
+    ('notifications.list_notifications', 'Notifications', 'fa-bell'),
+  ],
+  'student': [
+    ('student.dashboard', 'Dashboard', 'fa-gauge-high'),
+    ('student.my_attendance', 'My Attendance', 'fa-list-check'),
+    ('student.scan_qr', 'Scan QR', 'fa-qrcode'),
+    ('student.leave_requests', 'Leave Requests', 'fa-envelope-open-text'),
+    ('student.timetable', 'Timetable', 'fa-calendar-days'),
+    ('student.profile', 'Profile', 'fa-user'),
+    ('notifications.list_notifications', 'Notifications', 'fa-bell'),
+  ],
+} %}
+{% for endpoint, label, icon in _nav.get(session.get('role'), []) %}
+<a class="side-link {{ 'active' if request.endpoint == endpoint }}"
+   {% if request.endpoint == endpoint %}aria-current="page"{% endif %}
+   href="{{ url_for(endpoint) }}">
+  <i class="fas {{ icon }}" aria-hidden="true"></i><span>{{ label }}</span>
+</a>
+{% endfor %}
 {% endmacro %}
 
 {% macro filter_form(subjects, pairs, f, action=None) %}

@@ -137,3 +137,131 @@ def test_student_of_other_section_cannot_use_qr(multi, seed, app):
                              follow_redirects=True)
     assert b"marked present" in response.data or \
         b"already recorded" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Anti-proxy layers: geo fence, dynamic rotation, scan audit, device sharing
+# ---------------------------------------------------------------------------
+
+def _mint_geo_token(app, seed, *, lat, lon, radius=150, day=TODAY, period=6):
+    """Create a geo-fenced session row directly and return its token."""
+    from config import get_config
+    from database.db import get_db
+    from services import qr_service
+    from services.qr_service import token_hash
+
+    cfg = get_config("testing")()
+    with app.app_context():
+        token, expires = qr_service.create_token(
+            seed["teacher_id"], seed["subject_ids"][0], seed["class_id"],
+            seed["section_id"], day, period)
+    db = get_db(cfg)
+    try:
+        db.execute(
+            "INSERT INTO attendance_sessions (token_hash, teacher_id, "
+            "subject_id, class_id, section_id, attendance_date, period, "
+            "expires_at, require_geo, latitude, longitude, radius_m) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s, %s)",
+            (token_hash(token), seed["teacher_id"], seed["subject_ids"][0],
+             seed["class_id"], seed["section_id"], day, period, expires,
+             lat, lon, radius))
+        db.commit()
+    finally:
+        db.close()
+    return token
+
+
+def test_geo_required_without_location_rejected(student_client, seed, app):
+    token = _mint_geo_token(app, seed, lat=12.9716, lon=77.5946)
+    response = _scan(student_client, token)
+    assert b"Location is required" in response.data
+
+
+def test_geo_fence_rejects_far_student(student_client, seed, app):
+    token = _mint_geo_token(app, seed, lat=12.9716, lon=77.5946)
+    # ~25 km away from the fence center.
+    response = student_client.post(
+        "/attendance/scan",
+        data={"token": token, "latitude": "13.2100", "longitude": "77.7500"},
+        follow_redirects=True)
+    assert b"from the classroom" in response.data
+
+
+def test_geo_fence_allows_nearby_student(student_client, seed, app):
+    token = _mint_geo_token(app, seed, lat=12.9716, lon=77.5946)
+    response = student_client.post(
+        "/attendance/scan",
+        data={"token": token, "latitude": "12.9717", "longitude": "77.5947"},
+        follow_redirects=True)
+    assert b"marked present" in response.data
+
+
+def test_dynamic_rotation_still_validates(student_client, seed, app):
+    """A rotated (step-N) token must validate even though the DB only
+    stores the hash of the original token - that is the whole point of
+    rotation resisting screenshot sharing."""
+    from config import get_config
+    from database.db import get_db
+    from services import qr_service
+
+    cfg = get_config("testing")()
+    with app.app_context():
+        db = get_db(cfg)
+        try:
+            token, _ = qr_service.start_session(
+                db, teacher_id=seed["teacher_id"],
+                subject_id=seed["subject_ids"][0], class_id=seed["class_id"],
+                section_id=seed["section_id"], attendance_date=TODAY,
+                period=7, dynamic=True)
+            db.commit()
+            sess = db.query_one(
+                "SELECT * FROM attendance_sessions WHERE token_hash=%s",
+                (qr_service.token_hash(token),))
+            rotated, _ = qr_service.rotate_token(sess)
+        finally:
+            db.close()
+    assert rotated != token
+    response = _scan(student_client, rotated)
+    assert b"marked present" in response.data
+
+
+def test_scan_attempts_are_logged(student_client, seed, app, test_db):
+    token = _mint_token(student_client.application, seed)
+    _scan(student_client, token)                      # success
+    _scan(student_client, token)                      # duplicate
+    _scan(student_client, "forged.payload.deadbeef")  # rejected (no session)
+
+    from config import get_config
+    from database.db import get_db
+
+    db = get_db(get_config("testing")())
+    try:
+        results = [r["result"] for r in db.query(
+            "SELECT result FROM qr_scan_events ORDER BY scan_id")]
+        reasons = [r["reason"] for r in db.query(
+            "SELECT reason FROM qr_scan_events ORDER BY scan_id")]
+    finally:
+        db.close()
+    assert results == ["success", "duplicate"]
+    assert reasons[1] == "already marked"
+
+
+def test_device_sharing_flagged(multi, seed, app, test_db):
+    """Two students checking in from one device fingerprint is the
+    screenshot-share signature and must be flagged."""
+    token = _mint_token(app, seed)
+    _scan(multi("student"), token)
+    _scan(multi("student2"), token)  # test clients share the default UA
+
+    from config import get_config
+    from database.db import get_db
+    from services import qr_service
+
+    db = get_db(get_config("testing")())
+    try:
+        session_id = db.query_value(
+            "SELECT MAX(session_id) FROM attendance_sessions")
+        flagged = qr_service.suspicious_devices(db, session_id, threshold=1)
+    finally:
+        db.close()
+    assert flagged and flagged[0]["students"] >= 2

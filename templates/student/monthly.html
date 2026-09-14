@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Monthly Attendance{% endblock %}
+{% block title %}AttendSecure | Monthly Attendance{% endblock %}
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 {% endblock %}
@@ -8,10 +8,10 @@
 
 <div class="row g-3 mb-4">
   {% from "partials.html" import stat_card %}
-  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
-  {{ stat_card('fa-calendar-check', '#0ea5e9', 'Total classes', overall.total) }}
-  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
-  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
+  {{ stat_card('fa-percent', '#2563eb', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-calendar-check', '#0891b2', 'Total classes', overall.total) }}
+  {{ stat_card('fa-check', '#16a34a', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#dc2626', 'Absent', overall.absent) }}
 </div>
 
 <div class="card">
@@ -48,7 +48,7 @@
       datasets: [{
         label: 'Attendance %',
         data: {{ trend | map(attribute='percentage') | list | tojson }},
-        borderColor: '#4f46e5',
+        borderColor: '#2563eb',
         backgroundColor: 'rgba(79,70,229,0.1)',
         fill: true,
         tension: 0.3

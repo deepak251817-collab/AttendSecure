@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1220">
+<title>Attendance in progress — AttendSecure</title>
+<style>
+  /* A projector artifact, not a dashboard: dark ink stage so the white
+     QR sheet is the brightest thing in the room and scans from the back
+     row. Palette derives from AttendSecure's dark theme tokens. */
+  :root {
+    --stage: #0b1220;
+    --stage-raise: #121a2b;
+    --stage-line: #24304a;
+    --stage-text: #e6eaf2;
+    --stage-muted: #93a0b8;
+    --accent: #4f8bff;
+    --go: #5fc98e;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--stage);
+    color: var(--stage-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-bottom: env(safe-area-inset-bottom);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 1.1rem 2rem .4rem;
+  }
+  .brand { color: var(--stage-muted); font-size: .95rem; }
+  .brand strong { color: var(--stage-text); font-weight: 600; }
+  .what { font-size: clamp(1.3rem, 2.6vw, 2.2rem); font-weight: 700; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+  .when { color: var(--stage-muted); font-size: clamp(.9rem, 1.4vw, 1.2rem); margin-left: auto; }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(300px, 42vh) 1fr;
+    gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: center;
+    padding: 1rem 2rem 2rem;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  /* The QR sheet: the only white surface, sized to scan from distance */
+  .sheet {
+    background: #fff;
+    border-radius: 18px;
+    padding: clamp(.8rem, 1.6vw, 1.4rem);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .45);
+    justify-self: center;
+    width: 100%;
+    max-width: 42vh;
+  }
+  .sheet img { display: block; width: 100%; height: auto; border-radius: 8px; }
+  /* Rotation rhythm: a draining bar plus plain words */
+  .rotation { margin-top: .9rem; }
+  .rotation .label { font-size: .95rem; color: var(--stage-muted); margin-bottom: .4rem; }
+  .rotation .label b { color: var(--go); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .bar { height: 6px; border-radius: 999px; background: var(--stage-line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--go); border-radius: 999px; }
+  .facts { display: flex; flex-direction: column; gap: clamp(.9rem, 2.2vh, 1.6rem); }
+  .fact .n {
+    font-size: clamp(2.4rem, 6.5vw, 5rem);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact .t { color: var(--stage-muted); font-size: clamp(1rem, 1.8vw, 1.35rem); }
+  .fact:first-child .n { color: var(--go); }
+  .hint {
+    color: var(--stage-muted);
+    font-size: clamp(.95rem, 1.5vw, 1.15rem);
+    max-width: 34rem;
+    line-height: 1.5;
+  }
+  .hint .kbd {
+    display: inline-block;
+    border: 1px solid var(--stage-line);
+    background: var(--stage-raise);
+    border-radius: 6px;
+    padding: .05em .5em;
+    font-size: .85em;
+  }
+  .kbd.fs-btn {
+    color: var(--stage-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .kbd.fs-btn:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .ended {
+    margin: auto;
+    text-align: center;
+    padding: 2rem;
+  }
+  .ended h1 { font-size: clamp(1.6rem, 4vw, 3rem); margin: 0 0 .6rem; text-wrap: balance; }
+  .ended p { color: var(--stage-muted); font-size: 1.15rem; }
+  .ended .again {
+    display: inline-block;
+    margin-top: 1.2rem;
+    padding: .7rem 1.6rem;
+    background: var(--accent);
+    color: var(--stage);
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+  .ended .again:hover { filter: brightness(1.12); }
+  .ended .again:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .fullscreen-hint {
+    position: fixed;
+    bottom: 1.2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--stage-muted);
+    font-size: .9rem;
+    background: var(--stage-raise);
+    border: 1px solid var(--stage-line);
+    border-radius: 999px;
+    padding: .45rem 1.1rem;
+    transition: opacity 1s ease;
+  }
+  .fullscreen-hint.gone { opacity: 0; pointer-events: none; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; text-align: center; }
+    .facts { align-items: center; }
+    header { flex-wrap: wrap; }
+    .when { margin-left: 0; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fullscreen-hint { transition: none; }
+  }
+</style>
+</head>
+<body>  {% if ended %}
+  <div class="ended">
+    <h1>This session has ended.</h1>
+    <p>Attendance for this class is closed. Start a new session to open the next one.</p>
+    <a class="again" href="{{ url_for('teacher.new_session') }}">Start a new session</a>
+  </div>
+{% else %}
+  <header>
+    <p class="what">{{ section_label }} · Period {{ period }}</p>
+    <span class="when" data-iso-date="{{ attendance_date }}">{{ attendance_date }}</span>
+  </header>
+  <main>
+    <div class="sheet">
+      <img src="{{ qr_uri }}" alt="Attendance QR code" width="420" height="420">
+      <div class="rotation">
+        <div class="label">New code in <b id="secs">{{ rotate_seconds }}</b>&nbsp;s — screenshots expire with it</div>
+        <div class="bar"><i id="bar" style="width: 100%"></i></div>
+      </div>
+    </div>
+    <div class="facts">
+      <div class="fact"><div class="n" id="count" aria-live="polite">0</div><div class="t">checked in</div></div>
+      <p class="hint">
+        Scan with your phone camera or the AttendSecure app, then check in
+        from your dashboard. One check-in per student — the code only works
+        for this class and period.
+      </p>
+    </div>
+  </main>
+  <div class="fullscreen-hint" id="fsh">
+    Press <span class="kbd">F</span> or
+    <button type="button" class="kbd fs-btn" id="fs-btn">tap here</button>
+    for fullscreen
+  </div>
+
+<script>
+(function () {
+  // Render the date in the viewer's locale (server supplies ISO only).
+  var when = document.querySelector("[data-iso-date]");
+  if (when) {
+    var d = new Date(when.getAttribute("data-iso-date") + "T00:00:00");
+    if (!isNaN(d)) { when.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(d); }
+  }
+
+  var sessionId = {{ session.session_id }};
+  var rotateSeconds = {{ rotate_seconds }};
+  var secs = document.getElementById("secs");
+  var bar = document.getElementById("bar");
+  var img = document.querySelector(".sheet img");
+  var count = document.getElementById("count");
+
+  // Draining countdown; the swap itself is instant, not animated.
+  // Under prefers-reduced-motion the number still updates; only the bar
+  // animation (a repeating transform) is suppressed.
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var t0 = Date.now();
+  if (!reduceMotion) {
+    setInterval(function () {
+      var left = rotateSeconds - (Date.now() - t0) / 1000;
+      if (left <= 0) left = rotateSeconds;
+      secs.textContent = Math.ceil(left);
+      bar.style.width = (left / rotateSeconds * 100) + "%";
+    }, 250);
+  } else {
+    secs.textContent = rotateSeconds;
+    bar.style.width = "100%";
+  }
+
+  function tick() {
+    fetch("/attendance/session/" + sessionId + "/rotate")
+      .then(function (r) {
+        if (r.status === 404) { location.reload(); return null; }
+        return r.ok ? r.json() : null;
+      })
+      .then(function (d) {
+        if (!d) return;
+        if (d.qr_uri) { img.src = d.qr_uri; }
+        if (d.checked_in != null) { count.textContent = d.checked_in; }
+        t0 = Date.now();
+      })
+      .catch(function () {});
+  }
+  tick();
+  setInterval(tick, rotateSeconds * 1000);
+
+  // Fullscreen: the whole point of a projector page. F toggles it.
+  var fsh = document.getElementById("fsh");
+  function toggleFs() {
+    if (document.fullscreenElement) { document.exitFullscreen(); }
+    else { document.documentElement.requestFullscreen().catch(function () {}); }
+  }
+  document.getElementById("fs-btn").addEventListener("click", toggleFs);
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) { toggleFs(); }
+  });
+  document.addEventListener("fullscreenchange", function () {
+    fsh.classList.toggle("gone", !!document.fullscreenElement);
+  });
+  setTimeout(function () { fsh.classList.add("gone"); }, 6000);
+})();
+</script>
+{% endif %}
+</body>
+</html>

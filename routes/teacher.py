@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date as date_cls
+from datetime import datetime
 
 from flask import (
     Blueprint, current_app, flash, redirect, render_template, request,
@@ -376,32 +377,228 @@ def new_session():
             period = request.form.get("period", 1, type=int) or 1
             attendance_date = request.form.get("attendance_date") \
                 or date_cls.today().isoformat()
+            require_geo = bool(request.form.get("require_geo"))
+            dynamic = current_app.config["QR_DYNAMIC"] \
+                and bool(request.form.get("dynamic_qr", "1"))
+            latitude = request.form.get("latitude", type=float)
+            longitude = request.form.get("longitude", type=float)
+            radius = current_app.config["QR_GEO_RADIUS_M"]
             sel = next((p for p in pairs if p["section_id"] == section_id),
                        None)
             if not sel or not attendance_service.teacher_is_assigned(
                     db, teacher_id, subject_id or 0):
                 flash("Invalid section or subject selection.", "error")
                 return redirect(request.url)
+            if require_geo and (latitude is None or longitude is None):
+                flash("Location is required for the geo fence. Allow location "
+                      "access in your browser, or uncheck the location check.",
+                      "error")
+                return redirect(request.url)
             try:
                 token, expires = qr_service.start_session(
                     db, teacher_id=teacher_id, subject_id=subject_id,
                     class_id=sel["class_id"], section_id=section_id,
-                    attendance_date=attendance_date, period=period)
+                    attendance_date=attendance_date, period=period,
+                    require_geo=require_geo, latitude=latitude,
+                    longitude=longitude, radius_m=radius, dynamic=dynamic)
                 db.commit()
             except DatabaseError:
                 db.rollback()
                 flash("Could not start the session.", "error")
                 return redirect(request.url)
             qr_uri = qr_service.qr_png_data_uri(token)
+            audit_service.log_action(
+                db, session["user_id"], "start_qr_session", "section",
+                section_id,
+                f"Session for period {period}"
+                + (" with geo fence" if require_geo else ""))
+            db.commit()
             return render_template(
                 "teacher/qr_session.html", qr_uri=qr_uri, expires=expires,
+                expires_in=int((expires - datetime.now()).total_seconds()),
+                session=db.query_one(
+                    "SELECT * FROM attendance_sessions "
+                    "WHERE token_hash=%s", (qr_service.token_hash(token),)),
                 minutes=current_app.config["QR_SESSION_MINUTES"],
-                subject_id=subject_id, section_label=sel["label"],
+                rotate_seconds=current_app.config["QR_ROTATE_SECONDS"],
+                dynamic=dynamic, require_geo=require_geo,
+                section_label=sel["label"],
                 attendance_date=attendance_date, period=period)
 
         return render_template("teacher/new_session.html", subjects=subjects,
                                pairs=pairs,
                                today=date_cls.today().isoformat())
+    finally:
+        db.close()
+
+
+@bp.route("/attendance/session/<int:session_id>")
+@login_required
+@role_required("teacher")
+def reopen_session(session_id):
+    """Re-open the projection screen for an active session (e.g. after an
+    accidental refresh). Dynamic sessions get a fresh rotation; static
+    sessions cannot be reproduced (only their hash is stored), so the
+    teacher is sent to start a new one."""
+    db = get_db()
+    try:
+        teacher_id = _teacher_id(db)
+        sess = db.query_one(
+            "SELECT * FROM attendance_sessions "
+            "WHERE session_id=%s AND teacher_id=%s",
+            (session_id, teacher_id))
+        if not sess or not sess["is_active"]:
+            flash("That session is not active. Start a new one.", "error")
+            return redirect(url_for("teacher.new_session"))
+        if sess["expires_at"] < datetime.now():
+            db.execute("UPDATE attendance_sessions SET is_active=0 "
+                       "WHERE session_id=%s", (session_id,))
+            db.commit()
+            flash("That session has expired. Start a new one.", "error")
+            return redirect(url_for("teacher.new_session"))
+        token = None
+        if sess["dynamic_qr"]:
+            rotated = qr_service.rotate_token(sess)
+            token = rotated[0] if rotated else None
+        if token is None:
+            flash(
+                "Static session codes cannot be re-displayed. "
+                "Please start a new session.", "error")
+            return redirect(url_for("teacher.new_session"))
+        sel = next((p for p in attendance_service.class_sections(db)
+                    if p["section_id"] == sess["section_id"]), None)
+        return render_template(
+            "teacher/qr_session.html",
+            qr_uri=qr_service.qr_png_data_uri(token),
+            expires=sess["expires_at"], session=sess,
+            expires_in=int((sess["expires_at"] - datetime.now()).total_seconds()),
+            minutes=current_app.config["QR_SESSION_MINUTES"],
+            rotate_seconds=current_app.config["QR_ROTATE_SECONDS"],
+            dynamic=bool(sess["dynamic_qr"]),
+            require_geo=bool(sess["require_geo"]),
+            section_label=sel["label"] if sel else
+            f"Section {sess['section_id']}",
+            attendance_date=sess["attendance_date"], period=sess["period"])
+    finally:
+        db.close()
+
+
+@bp.route("/attendance/session/<int:session_id>/present")
+@login_required
+@role_required("teacher")
+def present_session(session_id):
+    """Chrome-free projection view: giant QR, rotation countdown and the
+    live check-in counter, sized to be read from the back of a room."""
+    db = get_db()
+    try:
+        teacher_id = _teacher_id(db)
+        sess = db.query_one(
+            "SELECT * FROM attendance_sessions "
+            "WHERE session_id=%s AND teacher_id=%s",
+            (session_id, teacher_id))
+        if not sess or not sess["is_active"]:
+            return render_template("teacher/qr_present.html",
+                                   ended=True, qr_uri=None, session=None,
+                                   section_label="", attendance_date="",
+                                   period="", rotate_seconds=0)
+        if sess["expires_at"] < datetime.now():
+            db.execute("UPDATE attendance_sessions SET is_active=0 "
+                       "WHERE session_id=%s", (session_id,))
+            db.commit()
+            return render_template("teacher/qr_present.html",
+                                   ended=True, qr_uri=None, session=None,
+                                   section_label="", attendance_date="",
+                                   period="", rotate_seconds=0)
+        token = None
+        if sess["dynamic_qr"]:
+            rotated = qr_service.rotate_token(sess)
+            token = rotated[0] if rotated else None
+        if token is None:
+            # Static sessions cannot be reproduced safely for projection.
+            return render_template("teacher/qr_present.html",
+                                   ended=True, qr_uri=None, session=None,
+                                   section_label="", attendance_date="",
+                                   period="", rotate_seconds=0)
+        sel = next((p for p in attendance_service.class_sections(db)
+                    if p["section_id"] == sess["section_id"]), None)
+        return render_template(
+            "teacher/qr_present.html", ended=False,
+            qr_uri=qr_service.qr_png_data_uri(token), session=sess,
+            section_label=sel["label"] if sel else
+            f"Section {sess['section_id']}",
+            attendance_date=sess["attendance_date"], period=sess["period"],
+            rotate_seconds=current_app.config["QR_ROTATE_SECONDS"])
+    finally:
+        db.close()
+
+
+@bp.route("/attendance/session/<int:session_id>/rotate")
+@login_required
+@role_required("teacher")
+def rotate_session(session_id):
+    """Return a fresh signed QR for the projection screen (called by JS
+    every few seconds while the session is live)."""
+    from flask import jsonify
+
+    db = get_db()
+    try:
+        teacher_id = _teacher_id(db)
+        sess = db.query_one(
+            "SELECT * FROM attendance_sessions "
+            "WHERE session_id=%s AND teacher_id=%s",
+            (session_id, teacher_id))
+        if not sess or not sess["is_active"]:
+            return jsonify({"error": "session ended"}), 404
+        if sess["expires_at"] < datetime.now():
+            db.execute("UPDATE attendance_sessions SET is_active=0 "
+                       "WHERE session_id=%s", (session_id,))
+            db.commit()
+            return jsonify({"error": "session ended"}), 404
+        rotated = qr_service.rotate_token(sess)
+        if not rotated:
+            # Static session: keep serving the original token.
+            return jsonify({"error": "static"}), 409
+        return jsonify({
+            "qr_uri": qr_service.qr_png_data_uri(rotated),
+            "expires_at": sess["expires_at"].strftime("%H:%M:%S"),
+            "checked_in": db.query_value(
+                "SELECT COUNT(*) FROM attendance WHERE subject_id=%s "
+                "AND attendance_date=%s AND period=%s",
+                (sess["subject_id"], sess["attendance_date"],
+                 sess["period"])),
+        })
+    finally:
+        db.close()
+
+
+@bp.route("/attendance/session/<int:session_id>/live")
+@login_required
+@role_required("teacher")
+def live_session(session_id):
+    """Live check-in feed + device-sharing flags for the teacher's screen."""
+    from flask import jsonify
+
+    db = get_db()
+    try:
+        teacher_id = _teacher_id(db)
+        sess = db.query_one(
+            "SELECT * FROM attendance_sessions "
+            "WHERE session_id=%s AND teacher_id=%s",
+            (session_id, teacher_id))
+        if not sess:
+            return jsonify({"error": "not found"}), 404
+        checkins = db.query(
+            """
+            SELECT u.full_name, st.register_number, a.marked_at
+            FROM attendance a
+            JOIN students st ON st.student_id = a.student_id
+            JOIN users u ON u.user_id = st.user_id
+            WHERE a.subject_id=%s AND a.attendance_date=%s AND a.period=%s
+            ORDER BY a.marked_at DESC LIMIT 30
+            """,
+            (sess["subject_id"], sess["attendance_date"], sess["period"]))
+        flagged = qr_service.suspicious_devices(db, session_id)
+        return jsonify({"checkins": checkins, "flagged_devices": flagged})
     finally:
         db.close()
 

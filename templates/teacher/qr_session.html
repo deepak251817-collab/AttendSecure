@@ -1,23 +1,172 @@
 {% extends "base.html" %}
-{% block title %}QR Session Active{% endblock %}
+{% block title %}AttendSecure | Secure QR Session{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-qrcode me-2"></i>Attendance Session Active</h2>
-<div class="row justify-content-center">
-  <div class="col-md-6">
+<div class="row g-3">
+  <div class="col-md-5">
     <div class="card text-center">
       <div class="card-body">
-        <img src="{{ qr_uri }}" alt="Attendance QR code" class="img-fluid border rounded p-2 mb-3" style="max-width: 320px;">
-        <h5>{{ section_label }} — period {{ period }}</h5>
+        <img src="{{ qr_uri }}" alt="Attendance QR code" id="qr-image"
+             width="320" height="320"
+             class="img-fluid border rounded p-2 mb-3" style="max-width: 320px;">
+        <h3>{{ section_label }} — period {{ period }}</h3>
         <p class="text-muted mb-1">{{ attendance_date }}</p>
-        <p><span class="badge bg-danger">Expires {{ expires.strftime('%H:%M:%S') }}</span>
-           <span class="text-muted small">(valid {{ minutes }} minutes)</span></p>
-        <div class="d-flex gap-2 justify-content-center">
-          <a href="{{ url_for('teacher.new_session') }}" class="btn btn-outline-primary">New session</a>
-          <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-secondary">Done</a>
+        <p>
+          <span class="badge bg-danger" id="expires-badge">Expires <span id="qr-expires">{{ expires.strftime('%H:%M:%S') }}</span></span>
+          <span class="badge bg-success-subtle text-success-emphasis live-dot">LIVE</span>
+          <span class="text-muted small">(valid {{ minutes }} minutes)</span>
+        </p>
+        {% if dynamic %}
+        <p class="text-muted small mb-2">
+          <i class="fas fa-sync-alt me-1"></i>The code refreshes every {{ rotate_seconds }}s —
+          screenshots and forwarded images lose value within seconds.
+        </p>
+        {% endif %}
+        {% if require_geo %}
+        <p class="text-muted small mb-0"><i class="fas fa-location-dot me-1"></i>Location verification is on.</p>
+        {% endif %}
+        <form method="POST" action="{{ url_for('teacher.end_session', session_id=session.session_id) }}" class="mt-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{{ url_for('teacher.present_session', session_id=session.session_id) }}"
+               target="_blank" rel="noopener" class="btn btn-primary">
+              <i class="fas fa-expand me-1" aria-hidden="true"></i>Present full screen
+            </a>
+            <button class="btn btn-outline-danger" data-busy-label="Ending…"
+                    formaction="{{ url_for('teacher.end_session', session_id=session.session_id) }}"
+                    onclick="return confirm('End this session now? Students will not be able to check in afterwards.')">End session</button>
+            <a href="{{ url_for('teacher.dashboard') }}" class="btn btn-secondary">Done</a>
+          </div>
+        </form>
+        <p class="text-muted small mt-2 mb-0">
+          Present mode shows a giant, back-row-scannable code with a live
+          check-in counter — built for the projector.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="mb-0"><i class="fas fa-users me-2" aria-hidden="true"></i>Check-ins: <span id="checkin-count">0</span></h3>
+          <span class="badge bg-success-subtle text-success-emphasis" id="live-dot">live</span>
         </div>
-        <p class="text-muted small mt-3 mb-0">Project the QR code; students use “Scan QR” on their dashboard.</p>
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Student</th><th>Register no.</th><th>Time</th></tr></thead>
+          <tbody id="checkin-body">
+            <tr><td colspan="3" class="text-muted">Waiting for the first check-in…</td></tr>
+          </tbody>
+        </table>
+        <div id="device-flags" class="mt-3" aria-live="polite"></div>
+        <p class="text-muted small mb-0">
+          Every scan attempt — accepted, duplicate or rejected — is logged.
+          Devices used by several students are flagged here as possible
+          code-sharing; review them in the session's audit trail.
+        </p>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  var sessionId = {{ session.session_id }};
+  var rotateSeconds = {{ rotate_seconds if dynamic else 0 }};
+  var qrImage = document.getElementById("qr-image");
+  var expiresEl = document.getElementById("qr-expires");
+  var countEl = document.getElementById("checkin-count");
+  var bodyEl = document.getElementById("checkin-body");
+  var flagsEl = document.getElementById("device-flags");
+  var expiresBadge = document.getElementById("expires-badge");
+  var lastQR = null;
+  var lastCount = null;
+
+  // Client-side countdown to the session expiry; turns amber under 2 min.
+  var expiresAtMs = Date.now() + {{ expires_in | default(600) }} * 1000;
+  setInterval(function () {
+    var left = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+    var mm = String(Math.floor(left / 60)).padStart(2, "0");
+    var ss = String(left % 60).padStart(2, "0");
+    expiresBadge.textContent = "";
+    expiresBadge.append("Expires ");
+    var t = document.createElement("span"); t.id = "qr-expires"; t.textContent = mm + ":" + ss;
+    expiresBadge.append(t);
+    expiresBadge.classList.toggle("expires-soon", left <= 120 && left > 0);
+  }, 1000);
+
+  function esc(s) {
+    return (s == null ? "" : String(s)).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function renderFeed(data) {
+    if (data.qr_uri && data.qr_uri !== lastQR) {
+      lastQR = data.qr_uri;
+      qrImage.src = data.qr_uri;
+      qrImage.classList.remove("qr-swap"); void qrImage.offsetWidth;
+      qrImage.classList.add("qr-swap");
+    }
+    if (data.checked_in != null && data.checked_in !== lastCount) {
+      lastCount = data.checked_in;
+      countEl.textContent = data.checked_in;
+      countEl.classList.remove("count-pop"); void countEl.offsetWidth;
+      countEl.classList.add("count-pop");
+    }
+    fetch("{{ url_for('teacher.live_session', session_id=0) }}".replace("/0/", "/" + sessionId + "/"))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (feed) {
+        if (!feed) return;
+        if (feed.checkins.length !== lastCount) {
+          lastCount = feed.checkins.length;
+          countEl.textContent = lastCount;
+          countEl.classList.remove("count-pop"); void countEl.offsetWidth;
+          countEl.classList.add("count-pop");
+        }
+        if (!feed.checkins.length) {
+          bodyEl.innerHTML = '<tr><td colspan="3" class="text-muted">Waiting for the first check-in…</td></tr>';
+        } else {
+          bodyEl.innerHTML = feed.checkins.map(function (c) {
+            return "<tr><td>" + esc(c.full_name) + "</td><td>" + esc(c.register_number) +
+                   "</td><td>" + esc(c.marked_at) + "</td></tr>";
+          }).join("");
+        }
+        if (feed.flagged_devices && feed.flagged_devices.length) {
+          flagsEl.innerHTML = feed.flagged_devices.map(function (f) {
+            return '<div class="alert alert-warning py-2 mb-2"><i class="fas fa-triangle-exclamation me-2"></i>' +
+                   "Device used by " + f.students + " students — possible code sharing.</div>";
+          }).join("");
+        } else {
+          flagsEl.innerHTML = "";
+        }
+      })
+      .catch(function () {});
+  }
+
+  function tick() {
+    fetch("{{ url_for('teacher.rotate_session', session_id=0) }}".replace("/0/", "/" + sessionId + "/"))
+      .then(function (r) {
+        if (r.status === 404) { window.location.href = "{{ url_for('teacher.dashboard') }}"; return null; }
+        return r.ok ? r.json() : null;
+      })
+      .then(function (data) { if (data) renderFeed(data); })
+      .catch(function () {});
+  }
+
+  {% if dynamic %}
+  tick();
+  setInterval(tick, rotateSeconds * 1000);
+  {% else %}
+  (function poll() {
+    fetch("{{ url_for('teacher.live_session', session_id=0) }}".replace("/0/", "/" + sessionId + "/"))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (feed) { if (feed) { renderFeed({ checked_in: feed.checkins.length }); } })
+      .catch(function () {});
+    setTimeout(poll, 5000);
+  })();
+  {% endif %}
+})();
+</script>
 {% endblock %}

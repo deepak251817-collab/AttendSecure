@@ -230,6 +230,13 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
     expires_at   DATETIME NOT NULL,
     is_active    TINYINT(1) NOT NULL DEFAULT 1,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Anti-proxy hardening
+    dynamic_qr   TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'QR rotates every few seconds',
+    session_nonce CHAR(16) NULL COMMENT 'shared by all rotations of this session',
+    require_geo  TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'students must be inside the geo fence',
+    latitude     DECIMAL(9, 6) NULL COMMENT 'fence center captured at session start',
+    longitude    DECIMAL(9, 6) NULL,
+    radius_m     SMALLINT UNSIGNED NULL COMMENT 'allowed distance from center, meters',
     CONSTRAINT fk_sess_teacher FOREIGN KEY (teacher_id)
         REFERENCES teachers (teacher_id) ON DELETE CASCADE,
     CONSTRAINT fk_sess_subject FOREIGN KEY (subject_id)
@@ -240,6 +247,32 @@ CREATE TABLE IF NOT EXISTS attendance_sessions (
         REFERENCES sections (section_id) ON DELETE CASCADE,
     UNIQUE KEY uq_session_token (token_hash),
     KEY idx_sess_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------------------------------------------------------
+-- QR scan telemetry: one row per scan attempt, including rejected ones.
+-- Powers duplicate/QR-sharing (device) detection and the live check-in feed.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qr_scan_events (
+    scan_id     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    session_id  INT UNSIGNED NOT NULL,
+    student_id  INT UNSIGNED NULL COMMENT 'NULL when the token was invalid',
+    user_id     INT UNSIGNED NULL,
+    result      ENUM('success', 'duplicate', 'rejected') NOT NULL,
+    reason      VARCHAR(120) NULL,
+    device_hash CHAR(64) NULL COMMENT 'salted hash of client hints',
+    latitude    DECIMAL(9, 6) NULL,
+    longitude   DECIMAL(9, 6) NULL,
+    distance_m  SMALLINT UNSIGNED NULL COMMENT 'distance from fence center',
+    ip_address  VARCHAR(45) NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_scan_session FOREIGN KEY (session_id)
+        REFERENCES attendance_sessions (session_id) ON DELETE CASCADE,
+    CONSTRAINT fk_scan_student FOREIGN KEY (student_id)
+        REFERENCES students (student_id) ON DELETE SET NULL,
+    KEY idx_scan_session_time (session_id, created_at),
+    KEY idx_scan_student (student_id),
+    KEY idx_scan_device (device_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------

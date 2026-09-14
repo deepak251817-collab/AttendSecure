@@ -113,9 +113,10 @@ def seed(test_db):
         # Per-test isolation: clear all data left by earlier tests.
         db.execute("SET FOREIGN_KEY_CHECKS=0")
         for table in ("audit_logs", "notifications", "attendance_edits",
-                      "attendance", "attendance_sessions", "leave_requests",
-                      "timetable", "teacher_subjects", "students", "teachers",
-                      "subjects", "sections", "classes", "users", "settings"):
+                      "qr_scan_events", "attendance", "attendance_sessions",
+                      "leave_requests", "timetable", "teacher_subjects",
+                      "students", "teachers", "subjects", "sections",
+                      "classes", "users", "settings"):
             db.execute(f"TRUNCATE TABLE {table}")
         db.execute("SET FOREIGN_KEY_CHECKS=1")
         db.commit()

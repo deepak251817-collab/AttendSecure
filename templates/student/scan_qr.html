@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Scan QR Attendance{% endblock %}
+{% block title %}AttendSecure | Scan QR{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-6">
@@ -11,20 +11,69 @@
           Scan the QR code projected by your teacher with any QR scanner app,
           or paste the scanned link/token below.
         </p>
-        <form method="POST">
+        <form method="POST" id="scan-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="latitude" id="geo-lat">
+          <input type="hidden" name="longitude" id="geo-lon">
           <div class="input-group mb-3">
-            <input type="text" name="token" class="form-control"
-                   placeholder="Paste the scanned token here" required>
-            <button class="btn btn-primary" type="submit">Check in</button>
+            <label class="visually-hidden" for="token">Scanned code</label>
+            <input type="text" name="token" id="token" class="form-control"
+                   placeholder="Paste the scanned code…" required
+                   autocomplete="off" spellcheck="false" autocapitalize="off">
+            <button class="btn btn-primary" type="submit" id="scan-btn">Check in</button>
           </div>
+          <div id="geo-status" class="small mb-2" role="status" aria-live="polite" hidden></div>
+          <button type="button" id="geo-btn" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-location-dot me-1"></i> Share my location
+          </button>
         </form>
         <p class="text-muted small mb-0">
           The token is valid for a short time and only works for your class,
-          subject and period. Duplicate check-ins are rejected.
+          subject and period. Duplicate check-ins are rejected, and if the
+          teacher enabled location verification you must be in the classroom —
+          share your location above before checking in.
         </p>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  var btn = document.getElementById("geo-btn");
+  var status = document.getElementById("geo-status");
+  var lat = document.getElementById("geo-lat");
+  var lon = document.getElementById("geo-lon");
+
+  function show(text, cls) {
+    status.hidden = false;
+    status.textContent = text;
+    status.className = "small mb-2 " + cls;
+  }
+
+  function capture() {
+    if (!navigator.geolocation) {
+      show("This browser cannot share your location.", "text-danger");
+      return;
+    }
+    show("Getting your location…", "text-muted");
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      lat.value = pos.coords.latitude.toFixed(6);
+      lon.value = pos.coords.longitude.toFixed(6);
+      show("Location ready — you can check in.", "text-success");
+      btn.classList.replace("btn-outline-secondary", "btn-outline-success");
+    }, function () {
+      show("Location unavailable — allow access in the browser and retry.", "text-danger");
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  }
+
+  btn.addEventListener("click", capture);
+  document.getElementById("scan-form").addEventListener("submit", function () {
+    var b = document.getElementById("scan-btn");
+    b.disabled = true;
+    b.textContent = "Checking in…";
+    setTimeout(function () { b.disabled = false; b.textContent = "Check in"; }, 8000);
+  });
+})();
+</script>
 {% endblock %}

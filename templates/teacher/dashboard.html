@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Teacher Dashboard{% endblock %}
+{% block title %}AttendSecure | Teacher Dashboard{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-chalkboard-teacher me-2"></i>Teacher Dashboard</h2>
 
 <div class="row g-3 mb-4">
   {% from "partials.html" import stat_card %}
-  {{ stat_card('fa-book', '#4f46e5', 'My Subjects', subjects | length) }}
-  {{ stat_card('fa-school', '#0ea5e9', 'My Classes', classes | length) }}
-  {{ stat_card('fa-check', '#22c55e', 'Today Present', today.get('present', 0)) }}
-  {{ stat_card('fa-xmark', '#ef4444', 'Today Absent', today.get('absent', 0)) }}
-  {{ stat_card('fa-hourglass-half', '#f59e0b', 'Pending Leaves', pending) }}
+  {{ stat_card('fa-book', '#2563eb', 'My Subjects', subjects | length) }}
+  {{ stat_card('fa-school', '#0891b2', 'My Classes', classes | length) }}
+  {{ stat_card('fa-check', '#16a34a', 'Today Present', today.get('present', 0)) }}
+  {{ stat_card('fa-xmark', '#dc2626', 'Today Absent', today.get('absent', 0)) }}
+  {{ stat_card('fa-hourglass-half', '#d97706', 'Pending Leaves', pending) }}
 </div>
 
 <div class="row g-3">
@@ -31,7 +31,11 @@
               <td>{{ r.classes_needed }} more</td>
             </tr>
           {% else %}
-            <tr><td colspan="4" class="text-center text-muted">No low-attendance students.</td></tr>
+            <tr><td colspan="4" class="p-0">
+              {% from "macros.html" import empty_state %}
+              {{ empty_state('fa-circle-check', 'All students above threshold',
+                             'No one is below the low-attendance limit in your classes right now.') }}
+            </td></tr>
           {% endfor %}
           </tbody>
         </table>
@@ -57,7 +61,11 @@
               <td>{{ t.class_name }}-{{ t.section_name }}</td>
             </tr>
           {% else %}
-            <tr><td colspan="5" class="text-center text-muted">No timetable entries yet.</td></tr>
+            <tr><td colspan="5" class="p-0">
+              {% from "macros.html" import empty_state %}
+              {{ empty_state('fa-calendar-days', 'No timetable entries yet',
+                             'Ask your admin to schedule your classes, or check back later.') }}
+            </td></tr>
           {% endfor %}
           </tbody>
         </table>

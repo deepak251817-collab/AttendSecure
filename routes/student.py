@@ -188,6 +188,11 @@ def scan_qr():
             student_id = _student_id(db)
             sess, error = qr_service.validate_session(db, token)
             if error:
+                if sess:
+                    qr_service.record_scan(db, sess, student_id=student_id,
+                                           user_id=session["user_id"],
+                                           result="rejected", reason=error)
+                    db.commit()
                 flash(error, "error")
                 return redirect(url_for("student.scan_qr"))
 
@@ -197,7 +202,25 @@ def scan_qr():
                 (student_id,),
             )
             if not student or student["section_id"] != sess["section_id"]:
+                qr_service.record_scan(db, sess, student_id=student_id,
+                                       user_id=session["user_id"],
+                                       result="rejected",
+                                       reason="wrong class")
+                db.commit()
                 flash("This QR code is not for your class.", "error")
+                return redirect(url_for("student.scan_qr"))
+
+            # Optional geolocation fence.
+            dist, geo_err = qr_service.geo_error(
+                sess,
+                request.form.get("latitude", type=float),
+                request.form.get("longitude", type=float))
+            if geo_err:
+                qr_service.record_scan(db, sess, student_id=student_id,
+                                       user_id=session["user_id"],
+                                       result="rejected", reason=geo_err)
+                db.commit()
+                flash(geo_err, "error")
                 return redirect(url_for("student.scan_qr"))
 
             # Duplicate protection is backed by the DB unique constraint.
@@ -213,10 +236,18 @@ def scan_qr():
                      sess["class_id"], sess["attendance_date"],
                      sess["period"]),
                 )
+                qr_service.record_scan(db, sess, student_id=student_id,
+                                       user_id=session["user_id"],
+                                       result="success")
                 db.commit()
             except MySQLError as exc:
                 db.rollback()
                 if getattr(exc, "errno", None) == 1062:
+                    qr_service.record_scan(db, sess, student_id=student_id,
+                                           user_id=session["user_id"],
+                                           result="duplicate",
+                                           reason="already marked")
+                    db.commit()
                     flash("Attendance already recorded for this session.",
                           "warning")
                     return redirect(url_for("student.dashboard"))

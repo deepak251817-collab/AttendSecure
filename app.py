@@ -39,6 +39,23 @@ def _configure_logging(app: Flask) -> None:
             app.logger.warning("File logging disabled (no write access).")
 
 
+def _register_template_globals(app: Flask) -> None:
+    """Template globals: asset cache-busting so browsers never serve a
+    stale stylesheet/JS after a redeploy."""
+    import os
+
+    _static = os.path.join(app.root_path, "static")
+
+    @app.context_processor
+    def _asset_v():
+        def asset_v(filename):
+            try:
+                return int(os.stat(os.path.join(_static, filename)).st_mtime)
+            except OSError:
+                return 0
+        return {"asset_v": asset_v}
+
+
 def _register_blueprints(app: Flask) -> None:
     from routes import (
         admin, auth, dashboard, notifications, reports, student, teacher,
@@ -101,6 +118,7 @@ def create_app(config_name: str | None = None) -> Flask:
     security_core.init_security(app)
     _register_blueprints(app)
     _register_error_handlers(app)
+    _register_template_globals(app)
 
     @app.teardown_appcontext
     def close_db(exc):

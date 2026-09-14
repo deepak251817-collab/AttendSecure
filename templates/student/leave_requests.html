@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Leave Requests{% endblock %}
+{% block title %}AttendSecure | Leave Requests{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-envelope-open-text me-2"></i>Leave Requests</h2>
 
@@ -52,7 +52,11 @@
           <td>{{ r.approver_name or '—' }}</td>
         </tr>
       {% else %}
-        <tr><td colspan="5" class="text-center text-muted">No requests yet.</td></tr>
+        <tr><td colspan="5" class="p-0">
+          {% from "macros.html" import empty_state %}
+          {{ empty_state('fa-envelope-open-text', 'No requests yet',
+                         'Use the form above to submit your first leave request — your teacher will review it.') }}
+        </td></tr>
       {% endfor %}
       </tbody>
     </table>

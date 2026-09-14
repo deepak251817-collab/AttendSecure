@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Student Dashboard{% endblock %}
+{% block title %}AttendSecure | Student Dashboard{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-user-graduate me-2"></i>My Dashboard</h2>
 
 <div class="row g-3 mb-4">
   {% from "partials.html" import stat_card %}
-  {{ stat_card('fa-percent', '#4f46e5', 'Overall %', overall.percentage ~ '%') }}
-  {{ stat_card('fa-check', '#22c55e', 'Present', overall.present) }}
-  {{ stat_card('fa-xmark', '#ef4444', 'Absent', overall.absent) }}
-  {{ stat_card('fa-plane', '#f59e0b', 'Leave', overall.leave) }}
-  {{ stat_card('fa-book', '#0ea5e9', 'Subjects', by_subject | length) }}
+  {{ stat_card('fa-percent', '#2563eb', 'Overall %', overall.percentage ~ '%') }}
+  {{ stat_card('fa-check', '#16a34a', 'Present', overall.present) }}
+  {{ stat_card('fa-xmark', '#dc2626', 'Absent', overall.absent) }}
+  {{ stat_card('fa-plane', '#d97706', 'Leave', overall.leave) }}
+  {{ stat_card('fa-book', '#0891b2', 'Subjects', by_subject | length) }}
 </div>
 
 {% if warnings %}
@@ -45,7 +45,11 @@
               </td>
             </tr>
           {% else %}
-            <tr><td colspan="4" class="text-center text-muted">No attendance recorded yet.</td></tr>
+            <tr><td colspan="4" class="p-0">
+              {% from "macros.html" import empty_state %}
+              {{ empty_state('fa-clipboard-question', 'No attendance recorded yet',
+                             'Once your teachers start marking attendance, your subject-wise summary appears here.') }}
+            </td></tr>
           {% endfor %}
           </tbody>
         </table>
@@ -64,7 +68,10 @@
           {% from "macros.html" import status_badge %}{{ status_badge(r.status) }}
         </li>
         {% else %}
-        <li class="list-group-item text-muted">Nothing yet.</li>
+        <li class="list-group-item p-0 border-0">
+          {% from "macros.html" import empty_state %}
+          {{ empty_state('fa-clock-rotate-left', 'Nothing yet', 'Your most recent classes will show up here.') }}
+        </li>
         {% endfor %}
       </ul>
     </div>
@@ -80,7 +87,12 @@
           {% from "macros.html" import status_badge %}{{ status_badge(l.status) }}
         </li>
         {% else %}
-        <li class="list-group-item text-muted">No leave requests.</li>
+        <li class="list-group-item p-0 border-0">
+          {% from "macros.html" import empty_state %}
+          {{ empty_state('fa-envelope-open-text', 'No leave requests',
+                         'Need a day off? Submit a request and track its status here.',
+                         url_for('student.leave_requests'), 'Request leave') }}
+        </li>
         {% endfor %}
       </ul>
     </div>

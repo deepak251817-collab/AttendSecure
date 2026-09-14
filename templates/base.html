@@ -1,92 +1,244 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Attendance Management System{% endblock %}</title>
+    <meta name="theme-color" content="#101a30">
+    <title>{% block title %}AttendSecure{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=asset_v('css/style.css')) }}">
+    <script src="{{ url_for('static', filename='js/theme.js', v=asset_v('js/theme.js')) }}"></script>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="{{ url_for('dashboard.dashboard') }}">
-      <i class="fas fa-graduation-cap me-1"></i> Attendance System
+<body class="{% block body_class %}{% endblock %}">
+<a class="visually-hidden-focusable position-absolute top-0 start-0 m-2 btn btn-sm btn-primary"
+   href="#main-content">Skip to main content</a>
+
+{% from "partials.html" import nav_links %}
+{% set _authed = session.get('user_id') %}
+
+{# ------------------------------------------------------------------
+   Application shell.
+   Authenticated: fixed sidebar + topbar (bell / theme / profile).
+   Anonymous (login): full-viewport centered layout, no sidebar
+   markup is rendered at all — no reserved space.
+   ------------------------------------------------------------------ #}
+<div class="app-shell {% if not _authed %}auth-shell{% endif %}">
+  {% if _authed %}
+  <aside class="sidebar" id="appSidebar">
+    <a class="side-brand" href="{{ url_for('dashboard.dashboard') }}" translate="no">
+      <span class="side-mark"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
+      <span class="side-brand-text">
+        <strong>AttendSecure</strong>
+        <small>Smart Attendance</small>
+      </span>
     </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="mainNav">
-      <ul class="navbar-nav me-auto">
-        {% if session.get('role') == 'admin' %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.users') }}">Users</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.academic') }}">Academic</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.assignments') }}">Assignments</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.index') }}">Reports</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('admin.audit') }}">Audit Logs</a></li>
-        {% elif session.get('role') == 'teacher' %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.dashboard') }}">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.mark_attendance') }}">Mark Attendance</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.view_attendance') }}">Attendance</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.new_session') }}">QR Session</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.leave_requests') }}">Leaves</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('teacher.timetable') }}">Timetable</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.index') }}">Reports</a></li>
-        {% elif session.get('role') == 'student' %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('student.dashboard') }}">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('student.my_attendance') }}">My Attendance</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('student.scan_qr') }}">Scan QR</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('student.leave_requests') }}">Leaves</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('student.timetable') }}">Timetable</a></li>
-        {% endif %}
-      </ul>
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link position-relative" href="{{ url_for('notifications.list_notifications') }}" title="Notifications">
-            <i class="fas fa-bell"></i>
-            <span id="unreadBadge" class="badge bg-danger d-none position-absolute top-0 start-100 translate-middle"></span>
-          </a>
-        </li>
-        <li class="nav-item"><span class="nav-link text-white-50">{{ session.get('username') }}</span></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a></li>
-      </ul>
+    <nav class="side-nav" aria-label="Main">
+      {{ nav_links() }}
+    </nav>
+    <div class="side-foot">
+      <a class="side-link" href="{{ url_for('auth.logout') }}">
+        <i class="fas fa-right-from-bracket" aria-hidden="true"></i><span>Logout</span>
+      </a>
     </div>
-  </div>
-</nav>
+  </aside>
+  {% endif %}
 
-<main class="container py-4">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="app-main">
+    <nav class="topbar" aria-label="Application">
+      <div class="topbar-left">
+        {% if _authed %}
+        <button class="drawer-toggle btn btn-outline-secondary btn-sm d-lg-none" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#mobileNav"
+                aria-controls="mobileNav" aria-label="Open navigation menu">
+          <i class="fas fa-bars" aria-hidden="true"></i>
+        </button>
+        {% else %}
+        <a class="topbar-brand" href="{{ url_for('auth.login') }}" translate="no">
+          <span class="side-mark"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
+          <strong>AttendSecure</strong>
+        </a>
+        {% endif %}
+        {% set _titles = {
+          'dashboard.dashboard': 'Dashboard',
+          'auth.login': 'Sign in',
+          'admin.dashboard': 'Dashboard', 'admin.users': 'Users',
+          'admin.academic': 'Classes & Subjects', 'admin.assignments': 'Assignments',
+          'admin.audit': 'Audit Logs', 'admin.add_user': 'Add User',
+          'admin.edit_user': 'Edit User', 'admin.import_users': 'Import Users',
+          'admin.reset_password': 'Reset Password',
+          'teacher.dashboard': 'Dashboard', 'teacher.mark_attendance': 'Mark Attendance',
+          'teacher.view_attendance': 'Attendance', 'teacher.new_session': 'Secure QR Attendance',
+          'teacher.qr_session': 'Secure QR Session', 'teacher.leave_requests': 'Leave Requests',
+          'teacher.timetable': 'Timetable', 'teacher.low_attendance': 'Low Attendance',
+          'teacher.edit_attendance': 'Edit Attendance', 'teacher.attendance_summary': 'Attendance Summary',
+          'teacher.reopen_session': 'Secure QR Session', 'teacher.present_session': 'Secure QR Session',
+          'student.dashboard': 'Dashboard', 'student.my_attendance': 'My Attendance',
+          'student.scan_qr': 'Scan QR', 'student.leave_requests': 'Leave Requests',
+          'student.timetable': 'Timetable', 'student.profile': 'My Profile',
+          'student.monthly': 'Monthly Attendance',
+          'reports.index': 'Reports & Exports',
+          'notifications.list_notifications': 'Notifications',
+        } %}
+        {% set _fallback = (request.endpoint or 'AttendSecure').split('.')[-1].replace('_', ' ')|title %}
+        {% block page_title %}{% if _authed %}<h1 class="topbar-title">{{ _titles.get(request.endpoint, _fallback) }}</h1>{% endif %}{% endblock %}
       </div>
-    {% endfor %}
-  {% endwith %}
-  {% block content %}{% endblock %}
-</main>
+      <div class="topbar-right">
+        <button id="themeToggle" class="theme-toggle" type="button"
+                aria-label="Switch to dark mode" title="Toggle theme">
+          <i class="fas fa-moon theme-ico-moon" aria-hidden="true"></i>
+          <i class="fas fa-sun theme-ico-sun" aria-hidden="true"></i>
+        </button>
+        {% if _authed %}
+        <a class="topbar-icon" href="{{ url_for('notifications.list_notifications') }}"
+           title="Notifications" aria-label="Notifications">
+          <i class="fas fa-bell" aria-hidden="true"></i>
+          <span id="unreadBadge" class="badge bg-danger d-none position-absolute translate-middle"></span>
+        </a>
+        <div class="dropdown">
+          <button class="profile-btn dropdown-toggle" type="button"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="avatar">{{ session.get('username', '?')|first|upper }}</span>
+            <span class="profile-name d-none d-md-inline">{{ session.get('username') }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end profile-menu">
+            <li><h6 class="dropdown-header">{{ session.get('username') }} <span class="text-muted">· {{ session.get('role')|title }}</span></h6></li>
+            {% if session.get('role') == 'student' %}
+            <li><a class="dropdown-item" href="{{ url_for('student.profile') }}"><i class="fas fa-user me-2" aria-hidden="true"></i>Profile &amp; password</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li><h6 class="dropdown-header">Appearance</h6></li>
+            <li><button type="button" class="dropdown-item theme-choice" data-theme-choice="light">
+              <i class="fas fa-sun me-2" aria-hidden="true"></i>Light<i class="fas fa-check ms-auto theme-check" aria-hidden="true"></i></button></li>
+            <li><button type="button" class="dropdown-item theme-choice" data-theme-choice="dark">
+              <i class="fas fa-moon me-2" aria-hidden="true"></i>Dark<i class="fas fa-check ms-auto theme-check" aria-hidden="true"></i></button></li>
+            <li><button type="button" class="dropdown-item theme-choice" data-theme-choice="system">
+              <i class="fas fa-desktop me-2" aria-hidden="true"></i>System<i class="fas fa-check ms-auto theme-check" aria-hidden="true"></i></button></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                <i class="fas fa-right-from-bracket me-2" aria-hidden="true"></i>Logout
+              </a>
+            </li>
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </nav>
 
-<footer class="text-center text-muted small pb-3">
-  Attendance Management System — Deepak R &amp; Yashaswini M
-</footer>
+    <main class="app-content" id="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            <i class="fas alert-icon {{ {'success': 'fa-circle-check', 'error': 'fa-circle-xmark', 'danger': 'fa-circle-xmark', 'warning': 'fa-triangle-exclamation', 'info': 'fa-circle-info'}.get(category, 'fa-circle-info') }}"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer text-center small">
+      AttendSecure — Smart, Secure &amp; Simple Attendance Management
+    </footer>
+  </div>
+</div>
+
+{% if _authed %}
+{# Mobile drawer: same links as the sidebar, rendered only when authed #}
+<div class="offcanvas offcanvas-start mobile-nav" tabindex="-1" id="mobileNav" aria-label="Navigation menu">
+  <div class="offcanvas-header">
+    <span class="side-brand">
+      <span class="side-mark"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
+      <span class="side-brand-text">
+        <strong>AttendSecure</strong>
+        <small>Smart Attendance</small>
+      </span>
+    </span>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close navigation"></button>
+  </div>
+  <div class="offcanvas-body">
+    <nav class="side-nav" aria-label="Main mobile">
+      {{ nav_links() }}
+    </nav>
+    <a class="side-link mt-3" href="{{ url_for('auth.logout') }}">
+      <i class="fas fa-right-from-bracket" aria-hidden="true"></i><span>Logout</span>
+    </a>
+  </div>
+</div>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Poll unread notification count when logged in.
-  {% if session.get('user_id') %}
-  fetch('{{ url_for("notifications.unread_count") }}')
-    .then(r => r.json())
-    .then(d => {
-      const badge = document.getElementById('unreadBadge');
-      if (badge && d.count > 0) {
-        badge.textContent = d.count > 99 ? '99+' : d.count;
-        badge.classList.remove('d-none');
-      }
-    })
-    .catch(() => {});
+  // Iconified, auto-dismissing flash messages. Success/info confirmations
+  // fade after 10 s; errors and warnings stay until dismissed by hand.
+  document.querySelectorAll('.alert-dismissible').forEach(function (el) {
+    el.querySelector('.btn-close').addEventListener('click', function () { el.remove(); });
+    if (el.classList.contains('alert-success') || el.classList.contains('alert-info')) {
+      setTimeout(function () {
+        el.classList.add('flash-fade');
+        setTimeout(function () { el.remove(); }, 700);
+      }, 10000);
+    }
+  });
+
+  // Submitting a form should always feel acknowledged: spinner + disabled.
+  document.addEventListener('submit', function (e) {
+    const btn = e.submitter || e.target.querySelector('button[type=submit], button:not([type])');
+    if (btn && !btn.hasAttribute('data-no-busy')) {
+      btn.setAttribute('data-busy', '');
+      btn.dataset.orig = btn.innerHTML;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>' + (btn.dataset.busyLabel || 'Saving…');
+      // Fallback: never leave a button stuck if navigation is blocked.
+      setTimeout(function () {
+        if (btn.isConnected) { btn.removeAttribute('data-busy'); btn.innerHTML = btn.dataset.orig; }
+      }, 8000);
+    }
+  }, true);
+
+  // Mobile drawer: clicking a link should close it before navigating.
+  document.querySelectorAll('#mobileNav .side-link').forEach(function (a) {
+    a.addEventListener('click', function () {
+      const oc = bootstrap.Offcanvas.getInstance(document.getElementById('mobileNav'));
+      if (oc) { oc.hide(); }
+    });
+  });
+
+  // Notification badge: poll every 30 s, react to focus, update the tab title.
+  {% if _authed %}
+  (function () {
+    const badge = document.getElementById('unreadBadge');
+    const baseTitle = document.title;
+    let last = null;
+    function refresh() {
+      fetch('{{ url_for("notifications.unread_count") }}')
+        .then(r => r.json())
+        .then(d => {
+          const n = d.count || 0;
+          if (n > 0) {
+            badge.textContent = n > 99 ? '99+' : n;
+            badge.classList.remove('d-none');
+            document.title = '(' + n + ') ' + baseTitle;
+            // Pulse only when a NEW notification arrives — never continuously.
+            if (last != null && n > last) {
+              badge.classList.remove('badge-pulse'); void badge.offsetWidth;
+              badge.classList.add('badge-pulse');
+            }
+          } else {
+            badge.classList.add('d-none');
+            badge.textContent = '';
+            document.title = baseTitle;
+          }
+          last = n;
+        })
+        .catch(() => {});
+    }
+    refresh();
+    setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+  })();
   {% endif %}
 </script>
 {% block extra_js %}{% endblock %}

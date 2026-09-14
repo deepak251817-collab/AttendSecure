@@ -63,9 +63,19 @@ class BaseConfig:
     MAX_LOGIN_ATTEMPTS = _env_int("MAX_LOGIN_ATTEMPTS", 5)
     LOGIN_LOCKOUT_MINUTES = _env_int("LOGIN_LOCKOUT_MINUTES", 15)
 
+    # First-run guidance: show one-click demo accounts on the login page when
+    # the seeded demo users exist. Set 0 for real deployments.
+    SHOW_DEMO_ACCOUNTS = _env_bool("SHOW_DEMO_ACCOUNTS", "1")
+
     # Attendance / leaves
     LOW_ATTENDANCE_THRESHOLD = float(os.getenv("LOW_ATTENDANCE_THRESHOLD", "75"))
     QR_SESSION_MINUTES = _env_int("QR_SESSION_MINUTES", 5)
+    # Anti-proxy QR hardening
+    QR_DYNAMIC = _env_bool("QR_DYNAMIC", "1")          # rotating QR codes
+    QR_ROTATE_SECONDS = _env_int("QR_ROTATE_SECONDS", 10)
+    QR_REQUIRE_GEO_DEFAULT = _env_bool("QR_REQUIRE_GEO", "0")
+    QR_GEO_RADIUS_M = _env_int("QR_GEO_RADIUS_M", 150)
+    QR_DEVICE_SHARE_THRESHOLD = _env_int("QR_DEVICE_SHARE_THRESHOLD", 1)
 
     @staticmethod
     def validate():

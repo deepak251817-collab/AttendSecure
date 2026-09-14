@@ -1,64 +1,82 @@
 {% extends "base.html" %}
-{% block title %}Login — Attendance Management System{% endblock %}
-{% block extra_css %}
-<style>
-  body { display: flex; align-items: center; justify-content: center; }
-  .login-card { max-width: 420px; width: 100%; }
-</style>
-{% endblock %}
+{% block title %}AttendSecure | Login{% endblock %}
+{% block body_class %}login-page{% endblock %}
 {% block content %}
-<div class="row justify-content-center mt-5">
-  <div class="col-12 login-card">
-    <div class="card shadow">
+<div class="login-hero">
+  <div class="login-brand">
+    <span class="login-logo"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>
+    <h1 class="display-6 fw-bold mb-0" translate="no">AttendSecure</h1>
+    <p class="lede">Smart, Secure &amp; Simple Attendance Management</p>
+  </div>
+
+  <div class="login-panel">
+    <div class="card">
       <div class="card-body p-4">
-        <div class="text-center mb-4">
-          <i class="fas fa-user-graduate fa-3x text-primary"></i>
-          <h3 class="mt-2">Attendance System</h3>
-          <p class="text-muted mb-0">Sign in to continue</p>
-        </div>
+        <h2 class="h4 mb-1">Welcome back</h2>
+        <p class="text-muted small mb-4">Sign in to your {{ 'student' if demo_accounts else '' }} account to continue</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else category }}">{{ message }}</div>
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+              <i class="fas alert-icon {{ 'fa-circle-xmark' if category == 'error' else 'fa-circle-info' }}"></i>{{ message }}
+            </div>
           {% endfor %}
         {% endwith %}
 
         <form method="POST" action="{{ url_for('auth.login') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
-            <label class="form-label">Username</label>
+            <label class="form-label" for="username">Username</label>
             <div class="input-group">
-              <span class="input-group-text"><i class="fas fa-user"></i></span>
-              <input type="text" name="username" class="form-control" required autofocus>
+              <span class="input-group-text"><i class="fas fa-user" aria-hidden="true"></i></span>
+              <input type="text" name="username" id="username" class="form-control" autocomplete="username" required autofocus>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label">Password</label>
+            <label class="form-label" for="password">Password</label>
             <div class="input-group">
-              <span class="input-group-text"><i class="fas fa-lock"></i></span>
-              <input type="password" name="password" id="password" class="form-control" required>
-              <button type="button" class="btn btn-outline-secondary" id="togglePwd">
-                <i class="fas fa-eye"></i>
+              <span class="input-group-text"><i class="fas fa-lock" aria-hidden="true"></i></span>
+              <input type="password" name="password" id="password" class="form-control" autocomplete="current-password" required>
+              <button type="button" class="btn btn-outline-secondary" id="togglePwd" aria-label="Show or hide password" aria-pressed="false">
+                <i class="fas fa-eye" aria-hidden="true"></i>
               </button>
             </div>
           </div>
           <button type="submit" class="btn btn-primary w-100">
-            <i class="fas fa-sign-in-alt me-1"></i> Sign In
+            <i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i> Sign In
           </button>
         </form>
+
+        {% if demo_accounts %}
+        <div class="demo-hint mt-4">
+          <i class="fas fa-flask me-1" aria-hidden="true"></i><strong>Demo mode</strong> — click an account to fill the form:
+          {% for acc in demo_accounts %}
+            <button type="button" class="btn btn-link demo-fill"
+                    data-username="{{ acc.username }}" data-password="{{ acc.password }}">{{ acc.label }}</button>{{ ", " if not loop.last }}
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
     </div>
-    <p class="text-center text-muted small mt-3">Deepak R &amp; Yashaswini M</p>
   </div>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
+  // Show/hide password.
   document.getElementById('togglePwd').addEventListener('click', function () {
     const pwd = document.getElementById('password');
     const icon = this.querySelector('i');
-    if (pwd.type === 'password') { pwd.type = 'text'; icon.className = 'fas fa-eye-slash'; }
-    else { pwd.type = 'password'; icon.className = 'fas fa-eye'; }
+    if (pwd.type === 'password') { pwd.type = 'text'; icon.className = 'fas fa-eye-slash'; this.setAttribute('aria-pressed', 'true'); }
+    else { pwd.type = 'password'; icon.className = 'fas fa-eye'; this.setAttribute('aria-pressed', 'false'); }
+  });
+
+  // Demo mode: one click fills (never auto-submits) the login form.
+  document.querySelectorAll('.demo-fill').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('username').value = btn.dataset.username;
+      document.getElementById('password').value = btn.dataset.password;
+    });
   });
 </script>
 {% endblock %}

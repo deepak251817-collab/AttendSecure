@@ -1,15 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Start QR Attendance Session{% endblock %}
+{% block title %}AttendSecure | Secure QR Attendance{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-qrcode me-2"></i>Start QR Attendance Session</h2>
 <div class="card" style="max-width: 640px;">
   <div class="card-body">
-    <form method="POST">
+    <form method="POST" id="qr-session-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="latitude" id="geo-lat">
+      <input type="hidden" name="longitude" id="geo-lon">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label">Section *</label>
-          <select name="section_id" class="form-select" required>
+          <label class="form-label" for="section_id">Section *</label>
+          <select name="section_id" id="section_id" class="form-select" required>
             <option value="">Choose section…</option>
             {% for p in pairs %}
             <option value="{{ p.section_id }}">{{ p.label }}</option>
@@ -17,8 +19,8 @@
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Subject *</label>
-          <select name="subject_id" class="form-select" required>
+          <label class="form-label" for="subject_id">Subject *</label>
+          <select name="subject_id" id="subject_id" class="form-select" required>
             <option value="">Choose subject…</option>
             {% for s in subjects %}
             <option value="{{ s.subject_id }}">{{ s.name }}</option>
@@ -26,23 +28,81 @@
           </select>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Date</label>
-          <input type="date" name="attendance_date" class="form-control" value="{{ today }}">
+          <label class="form-label" for="attendance_date">Date</label>
+          <input type="date" name="attendance_date" id="attendance_date" class="form-control" value="{{ today }}">
         </div>
         <div class="col-md-4">
-          <label class="form-label">Period</label>
-          <input type="number" name="period" class="form-control" min="1" max="12" value="1">
+          <label class="form-label" for="period">Period</label>
+          <input type="number" name="period" id="period" class="form-control" min="1" max="12" value="1">
         </div>
         <div class="col-md-4 d-flex align-items-end">
           <button class="btn btn-success w-100"><i class="fas fa-play me-1"></i> Generate QR</button>
+        </div>
+        <div class="col-12">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="dynamic_qr" id="dynamic_qr" checked>
+            <label class="form-check-label" for="dynamic_qr">
+              Dynamic QR <span class="text-muted small">— the code refreshes every few seconds, so screenshots lose value quickly</span>
+            </label>
+          </div>
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" name="require_geo" id="require_geo">
+            <label class="form-check-label" for="require_geo">
+              Verify student location <span class="text-muted small">— check-ins are rejected outside the classroom radius</span>
+            </label>
+          </div>
+          <div id="geo-status" class="small mt-2" role="status" aria-live="polite" hidden></div>
         </div>
       </div>
       <p class="text-muted small mt-3 mb-0">
         The QR code is time-limited and signed; students scan it from their
         dashboard to be marked present. Only students of the selected section
-        can use it, and duplicate check-ins are rejected.
+        can use it, duplicate check-ins are rejected, and every scan attempt
+        is logged so shared codes can be flagged.
       </p>
     </form>
   </div>
 </div>
+
+<script>
+(function () {
+  var geoBox = document.getElementById("require_geo");
+  var status = document.getElementById("geo-status");
+  var lat = document.getElementById("geo-lat");
+  var lon = document.getElementById("geo-lon");
+
+  function show(text, ok) {
+    status.hidden = false;
+    status.textContent = text;
+    status.className = "small mt-2 " + (ok ? "text-success" : "text-danger");
+  }
+
+  function capture() {
+    if (!navigator.geolocation) {
+      show("This browser cannot share your location — uncheck the option to continue.", false);
+      return;
+    }
+    status.hidden = false;
+    status.textContent = "Locating the classroom…";
+    status.className = "small mt-2 text-muted";
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      lat.value = pos.coords.latitude.toFixed(6);
+      lon.value = pos.coords.longitude.toFixed(6);
+      show("Classroom location captured (±" + Math.round(pos.coords.accuracy || 0) + " m).", true);
+    }, function () {
+      show("Location unavailable — allow access or uncheck the option to continue.", false);
+      lat.value = ""; lon.value = "";
+    }, { enableHighAccuracy: true, timeout: 8000 });
+  }
+
+  geoBox.addEventListener("change", function () {
+    if (geoBox.checked) { capture(); }
+    else { lat.value = ""; lon.value = ""; status.hidden = true; }
+  });
+
+  document.getElementById("qr-session-form").addEventListener("submit", function (ev) {
+    if (geoBox.checked && !lat.value) { ev.preventDefault(); capture(); }
+  });
+})();
+</script>
 {% endblock %}

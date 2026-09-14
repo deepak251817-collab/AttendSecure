@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Leave Requests{% endblock %}
+{% block title %}AttendSecure | Leave Requests{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-envelope-open-text me-2"></i>Leave Requests</h2>
 <div class="card">
@@ -38,7 +38,11 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="text-center text-muted">No leave requests.</td></tr>
+        <tr><td colspan="7" class="p-0">
+          {% from "macros.html" import empty_state %}
+          {{ empty_state('fa-inbox', 'No leave requests',
+                         "Requests from students in your classes will appear here for you to approve or reject.") }}
+        </td></tr>
       {% endfor %}
       </tbody>
     </table>

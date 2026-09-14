@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Mark Attendance{% endblock %}
+{% block title %}AttendSecure | Mark Attendance{% endblock %}
 {% block content %}
 <h2 class="mb-3"><i class="fas fa-clipboard-check me-2"></i>Mark Attendance</h2>
 
@@ -92,7 +92,12 @@
   </div>
 </div>
 {% else %}
-<div class="alert alert-info">Choose a section, subject and date, then press <strong>Load</strong> to display the roster.</div>
+{% from "macros.html" import empty_state %}
+<div class="card">
+  {{ empty_state('fa-hand-pointer', 'Pick a class to begin',
+                 'Choose a section, subject and date above, then press Load to display the roster.',
+                 url_for('teacher.dashboard'), 'Back to dashboard') }}
+</div>
 {% endif %}
 {% endblock %}
 {% block extra_js %}

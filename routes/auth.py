@@ -1,6 +1,8 @@
 """Authentication routes: login, logout, health."""
 from __future__ import annotations
 
+import os
+
 from flask import (
     Blueprint, current_app, flash, jsonify, redirect, render_template,
     request, session, url_for,
@@ -76,7 +78,31 @@ def login():
             if db is not None:
                 db.close()
 
-    return render_template("login.html")
+    # Demo mode: on a freshly seeded database the well-known demo accounts
+    # exist, so first-time users get one-click guidance on the login page.
+    demo_accounts: list[dict] = []
+    if current_app.config.get("SHOW_DEMO_ACCOUNTS", True):
+        db = None
+        try:
+            db = get_db()
+            names = [r["username"] for r in db.query(
+                "SELECT username FROM users WHERE username IN "
+                "('admin', 'teacher1', 'student_cseA01')")]
+            if len(names) == 3:
+                demo_accounts = [
+                    {"username": "admin", "label": "Admin",
+                     "password": os.getenv("DEMO_ADMIN_PASSWORD", "adminpass")},
+                    {"username": "teacher1", "label": "Teacher",
+                     "password": "teach@123"},
+                    {"username": "student_cseA01", "label": "Student",
+                     "password": "study@123"},
+                ]
+        except DatabaseError:
+            demo_accounts = []
+        finally:
+            if db is not None:
+                db.close()
+    return render_template("login.html", demo_accounts=demo_accounts)
 
 
 @bp.route("/logout")

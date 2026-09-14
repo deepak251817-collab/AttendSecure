@@ -26,6 +26,15 @@
 <span class="badge badge-{{ status }}">{{ status | capitalize }}</span>
 {% endmacro %}
 
+{% macro empty_state(icon, title, hint=None, cta_href=None, cta_label=None) %}
+<div class="empty-state">
+  <span class="empty-icon"><i class="fas {{ icon }}"></i></span>
+  <div class="empty-title">{{ title }}</div>
+  {% if hint %}<div class="empty-hint">{{ hint }}</div>{% endif %}
+  {% if cta_href %}<a href="{{ cta_href }}" class="btn btn-sm btn-outline-primary">{{ cta_label }}</a>{% endif %}
+</div>
+{% endmacro %}
+
 {% macro progress_bar(percentage) %}
 <div class="progress" role="progressbar">
   <div class="progress-bar {{ 'bg-success' if percentage >= 75 else ('bg-warning' if percentage >= 60 else 'bg-danger') }}"

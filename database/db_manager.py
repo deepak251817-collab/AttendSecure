@@ -47,10 +47,36 @@ def ensure_schema(cfg, database: str | None = None) -> None:
         cur = cnx.cursor()
         for statement in filter(None, (s.strip() for s in sql.split(";"))):
             cur.execute(statement)
+        # Lightweight in-place upgrades for databases created by older
+        # versions of the schema (CREATE TABLE IF NOT EXISTS skips them).
+        for upgrade in _UPGRADES:
+            try:
+                cur.execute(upgrade)
+            except MySQLError as exc:
+                if exc.errno != 1060:  # 1060: duplicate column (already applied)
+                    raise
         cur.close()
         logger.info("Schema ensured on %s", database)
     finally:
         cnx.close()
+
+
+# Applied in order; safe to re-run (duplicate-column errors are ignored).
+_UPGRADES = [
+    # Anti-proxy hardening for attendance_sessions (added after first release)
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN dynamic_qr TINYINT(1) NOT NULL DEFAULT 1",
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN session_nonce CHAR(16) NULL",
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN require_geo TINYINT(1) NOT NULL DEFAULT 0",
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN latitude DECIMAL(9, 6) NULL",
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN longitude DECIMAL(9, 6) NULL",
+    "ALTER TABLE attendance_sessions "
+    "ADD COLUMN radius_m SMALLINT UNSIGNED NULL",
+]
 
 
 def reset_database(cfg, database: str | None = None) -> None:
