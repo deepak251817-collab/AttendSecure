@@ -85,7 +85,7 @@ AttendSecure/
 ### 1. Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/AttendSecure.git
+git clone https://github.com/deepak251817-collab/AttendSecure.git
 cd AttendSecure
 ```
 
