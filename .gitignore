@@ -1,53 +1,191 @@
-# Environments / secrets
+# ============================================================
+
+# AttendSecure - Git Ignore
+
+# ============================================================
+
+# ------------------------------------------------------------
+
+# Environment & Secrets
+
+# ------------------------------------------------------------
+
 .env
 .env.*
 !.env.example
-.flask_secret_key
+
+secrets/
+credentials/
+
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ------------------------------------------------------------
 
 # Python
-__pycache__/
+
+# ------------------------------------------------------------
+
+**pycache**/
 *.py[cod]
-*.pyo
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
+*$py.class
+*.so
 
 # Virtual environments
+
 .venv/
 venv/
 env/
 ENV/
 
-# MySQL / database artifacts
-*.sql.gz
-*.dump
-*.bak
-*.db
-*.sqlite
-*.sqlite3
-# Keep the canonical schema in Git
-!database/schemas/schema.sql
-docker/mysql/data/
-docker/mysql/test-data/
+# Python packaging
 
-# Logs
-logs/
-*.log
-
-# Uploads (keep the folder, ignore content)
-uploads/*
-!uploads/.gitkeep
-!uploads/sample_users.csv.example
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Build / packaging
 build/
 dist/
 *.egg-info/
+.eggs/
+
+# ------------------------------------------------------------
+
+# Testing / Coverage
+
+# ------------------------------------------------------------
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------
+
+# Runtime files
+
+# ------------------------------------------------------------
+
+*.log
+logs/
+*.pid
+*.tmp
+*.temp
+
+# ------------------------------------------------------------
+
+# Uploads
+
+# ------------------------------------------------------------
+
+uploads/*
+!uploads/.gitkeep
+
+# ------------------------------------------------------------
+
+# Local databases & database dumps
+
+# ------------------------------------------------------------
+
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+
+*.dump
+*.bak
+*.backup
+*.sql.gz
+
+backup/
+backups/
+database/dumps/
+
+# Keep the application schema tracked:
+
+# database/schemas/schema.sql
+
+# ------------------------------------------------------------
+
+# IDE / Editors
+
+# ------------------------------------------------------------
+
+.vscode/
+.idea/
+
+*.swp
+*.swo
+*.swn
+
+# ------------------------------------------------------------
+
+# Operating System
+
+# ------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------
+
+# Frontend / Node
+
+# ------------------------------------------------------------
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ------------------------------------------------------------
+
+# Build / Generated files
+
+# ------------------------------------------------------------
+
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# ------------------------------------------------------------
+
+# Local development / tooling artifacts
+
+# ------------------------------------------------------------
+
+.freebuff/
+.local/
+.temp/
+tmp/
+temp/
+
+# ------------------------------------------------------------
+
+# Archives
+
+# ------------------------------------------------------------
+
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# ------------------------------------------------------------
+
+# Backup / temporary editor files
+
+# ------------------------------------------------------------
+
+*~
+*.orig
+*.rej
